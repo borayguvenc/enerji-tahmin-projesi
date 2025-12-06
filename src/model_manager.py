@@ -2,12 +2,16 @@ import xgboost as xgb
 import os
 import sys
 import numpy as np
+import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+import matplotlib.pyplot as plt
 
 # --- CONFIG YOLU AYARI ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
+
+from config import (MODEL_NAME)
 
 def calculate_mape(y_true, y_pred):
     """
@@ -71,7 +75,7 @@ class ModelManager:
         
         return preds
 
-    def save_model(self, filename='xgboost_model_v3_365.json'):
+    def save_model(self, filename=MODEL_NAME):
         if self.model is None:
             print("No model to save.")
             return
@@ -80,7 +84,7 @@ class ModelManager:
         self.model.save_model(save_path)
         print(f"[ModelManager] Model saved to: {save_path}")
 
-    def load_model(self, filename='xgboost_model_v3_365.json'):
+    def load_model(self, filename=MODEL_NAME):
         load_path = os.path.join(self.model_dir, filename)
         if os.path.exists(load_path):
             self.model = xgb.XGBRegressor()
@@ -88,3 +92,36 @@ class ModelManager:
             print(f"[ModelManager] Model loaded from: {load_path}")
         else:
             print(f"Model file not found at: {load_path}")
+
+    def get_feature_importance(self):
+        """
+        Modelin hangi özelliğe ne kadar önem verdiğini gösterir.
+        Hem grafik çizer hem de DataFrame olarak döndürür.
+        """
+        if self.model is None:
+            print("Model henüz eğitilmedi!")
+            return None
+        
+        # Özelliklerin önem skorlarını al (Gain: Bilgi Kazancı)
+        # importance_type='gain' -> Hata düşürme gücüne bakar 
+        # importance_type='weight' -> Kaç kez kullanıldığına bakar
+        importance = self.model.get_booster().get_score(importance_type='gain')
+        
+        # Sözlükten DataFrame'e çevir ve sırala
+        df_imp = pd.DataFrame(list(importance.items()), columns=['Feature', 'Gain'])
+        df_imp = df_imp.sort_values(by='Gain', ascending=False)
+        
+        # --- 1. LİSTELEME ---
+        print("\n TOP 10 FEATURES:")
+        print(df_imp.head(10))
+        
+        print("\n GARBAGE FEATURES:")
+
+
+        # --- 2. GRAFİK ÇİZME ---
+        plt.figure(figsize=(10, 6))
+        # En önemli 20 özelliği çiz
+        xgb.plot_importance(self.model, importance_type='gain', max_num_features=20, height=0.5, title='Feature Importance (Gain)')
+        plt.show()
+        
+        return df_imp

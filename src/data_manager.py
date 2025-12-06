@@ -75,10 +75,8 @@ class DataManager:
             existing_drop_cols = [c for c in COLS_TO_DROP if c in df.columns]
             df.drop(columns=existing_drop_cols, inplace=True)
 
-        # ----------------------------------------------------
-        # 6. Eksik Veri ve Warmup
+        # 6. Eksik Verileri Çıkarma
         print(f"[DataManager] Dropping warm-up period ({WARMUP_PERIOD} rows)...")
-        # Sadece NaN olanları değil, baştaki Lag oluşma sürecini (warmup) atıyoruz
         df = df.iloc[WARMUP_PERIOD:] 
         df.dropna(inplace=True)
 

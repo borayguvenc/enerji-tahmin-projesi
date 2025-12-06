@@ -2,11 +2,9 @@
 __pycache__/
 *.py[cod]
 
-# Sanal ortam (venv)
 venv/
 env/
 
-# Excel veri dosyaları (Github'a yüklenmesin diyorsan)
 Input/*.xlsx
 Output/
 
