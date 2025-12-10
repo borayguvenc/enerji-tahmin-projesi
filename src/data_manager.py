@@ -41,6 +41,8 @@ class DataManager:
             except (ValueError, AttributeError):
                 pass
 
+
+
         # ----------------------------------------------------
         # 3. Tarih ve Saat İşlemleri
         df[RAW_DATE_COL] = pd.to_datetime(df[RAW_DATE_COL])
@@ -55,6 +57,41 @@ class DataManager:
         for tf in time_features:
             if tf in df.columns:
                 df[tf] = df[tf].astype(int)
+        
+        # ----------------------------------------------------
+        # [ADIM 2] OKUL TATİLLERİNİ AYRIŞTIRMA (Yaz vs Kış)
+        # ----------------------------------------------------
+        print("[DataManager] Sömestr ve Yaz tatilleri işleniyor...")
+
+        # 1. SÖMESTR TATİLLERİ (Kış Karakteristiği)
+        semester_ranges = [
+            ('2018-01-22', '2018-02-04'), ('2019-01-21', '2019-02-03'),
+            ('2020-01-20', '2020-02-02'), ('2021-01-25', '2021-02-14'),
+            ('2022-01-24', '2022-02-06'), ('2023-01-23', '2023-02-19'), # Deprem dahil
+            ('2024-01-22', '2024-02-04'), ('2025-01-20', '2025-02-02')
+        ]
+        
+        df['Is_Semester'] = 0
+        for start, end in semester_ranges:
+            mask = (df.index >= start) & (df.index <= end)
+            df.loc[mask, 'Is_Semester'] = 1
+
+        # 2. YAZ TATİLLERİ (Turizm/Klima Karakteristiği)
+        summer_ranges = [
+            ('2018-06-09', '2018-09-16'), ('2019-06-15', '2019-09-08'),
+            ('2020-03-16', '2020-09-20'), 
+            ('2021-07-03', '2021-09-05'), ('2022-06-18', '2022-09-11'),
+            ('2023-06-17', '2023-09-10'), ('2024-06-15', '2024-09-08'),
+            ('2025-06-21', '2025-09-08')
+        ]
+
+        df['Is_Summer_Break'] = 0
+        for start, end in summer_ranges:
+            mask = (df.index >= start) & (df.index <= end)
+            df.loc[mask, 'Is_Summer_Break'] = 1
+            
+        df['Is_Semester'] = df['Is_Semester'].astype(int)
+        df['Is_Summer_Break'] = df['Is_Summer_Break'].astype(int)
 
         # ----------------------------------------------------
         # 4. YENİ ÖZELLİK MÜHENDİSLİĞİ (Gelişmiş Hava Durumu)
@@ -81,6 +118,8 @@ class DataManager:
         else:
             print(f"   -> UYARI: {BASE_TEMP_COL} sütunu bulunamadı, Termal Özellikler oluşturulamadı.")
 
+            
+
         # ----------------------------------------------------
         # 5. Kategorik Veri İşleme
         # Özel Günler -> Category
@@ -88,18 +127,32 @@ class DataManager:
             print("[DataManager] Converting 'ÖzelGün_Adı' to category...")
             df['ÖzelGün_Adı'] = df['ÖzelGün_Adı'].astype('category')
 
-        # Is_lockdown -> Genelde 0/1 olur, int veya bool kalabilir.
-        if 'Is_lockdown' in df.columns:
-             df['Is_lockdown'] = df['Is_lockdown'].astype(int)
 
-        # dff: Difference (Fark)
-        """
-        df['Load_Diff_1h'] = df[RAW_TARGET_COL].diff(periods=1).shift(24) 
-        df['Load_Diff_24h'] = df[RAW_TARGET_COL].diff(periods=24).shift(24)
-        df['Temp_Slope_3h'] = df[BASE_TEMP_COL].diff(periods=3)
-        """
+        binary_flags = ['Is_Ramadan', 'Is_Sahur', 'Is_lockdown', 'Ramazan_Bayram','Yilbasi',"Kurban_Bayram","Secim_Gunu", "Milli_Bayram"] 
 
-        # ----------------------------------------------------
+        print(f"[DataManager] Binary sütunlar (0/1) işleniyor: {binary_flags}")
+
+        for col in binary_flags:
+            if col in df.columns:
+                # 1. Her ihtimale karşı eksik varsa 0 yap (Sen eksik yok dedin ama güvenliktir)
+                df[col] = df[col].fillna(0)
+                
+                # 2. Tipini 'int' (Tamsayı) yap. BU ÇOK ÖNEMLİ!
+                # Böylece 1.0 veya "1" gibi karışıklıklar düzelir, XGBoost hızlanır.
+                df[col] = df[col].astype(int)
+                
+                # print(f"   -> '{col}' sütunu başarıyla int tipine çevrildi.")
+            else:
+                print(f"   -> UYARI: '{col}' sütunu Excel'de bulunamadı! İsmi doğru yazdın mı?")
+
+        # Son 3 günün aynı saatinin ortalaması (Dün 14:00 + Evvelsi 14:00 + ...)
+        # (Lag24 + Lag48 + Lag72) / 3
+        df['Mean_Last_3_Days_Same_Hour'] = (
+            df[RAW_TARGET_COL].shift(24) + 
+            df[RAW_TARGET_COL].shift(48) + 
+            df[RAW_TARGET_COL].shift(72)
+        ) / 3
+
         # 6. Config'den Gelen Gereksiz Sütunları Atma
         if COLS_TO_DROP:
             print(f"[DataManager] Dropping columns from config: {COLS_TO_DROP}")
