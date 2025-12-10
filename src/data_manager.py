@@ -43,7 +43,6 @@ class DataManager:
 
         # ----------------------------------------------------
         # 3. Tarih ve Saat İşlemleri
-        print("[DataManager] Parsing dates...")
         df[RAW_DATE_COL] = pd.to_datetime(df[RAW_DATE_COL])
         
         # Tam datetime index oluşturma
@@ -58,7 +57,32 @@ class DataManager:
                 df[tf] = df[tf].astype(int)
 
         # ----------------------------------------------------
-        # 4. Kategorik Veri İşleme
+        # 4. YENİ ÖZELLİK MÜHENDİSLİĞİ (Gelişmiş Hava Durumu)
+        # ----------------------------------------------------
+        BASE_TEMP_COL = 'Hissedilen_Sıcaklık-MUGLA_MenteseCenter_OpenMeteo'
+        
+        if BASE_TEMP_COL in df.columns:
+            
+            # 1A. Sıcaklığın Karesi (Non-Linear U-Eğrisi)
+            # Konfor sıcaklığını 18°C kabul edip uzaklığı hesaplıyoruz.
+            # Tüketimin, 18'den uzaklaştıkça artacağını vurgular.
+            df['Temp_Squared_18'] = (df[BASE_TEMP_COL] - 18) ** 2
+            
+            # 1B. Termal Atalet (Sıcaklık Lag'leri)
+            # Binaların geç tepki verme süresini yakalar.
+            for lag in [3, 6, 12]:
+                new_col_name = f'Temp_Lag{lag}h'
+                
+                # 'shift' fonksiyonu, veriyi belirtilen adım kadar aşağı kaydırarak
+                # geçmişteki değeri şimdiki satıra getirir.
+                df[new_col_name] = df[BASE_TEMP_COL].shift(lag)
+                
+            print("   -> Temp_Squared_18, Temp_Lag3h/6h/12h eklendi.")
+        else:
+            print(f"   -> UYARI: {BASE_TEMP_COL} sütunu bulunamadı, Termal Özellikler oluşturulamadı.")
+
+        # ----------------------------------------------------
+        # 5. Kategorik Veri İşleme
         # Özel Günler -> Category
         if 'ÖzelGün_Adı' in df.columns:
             print("[DataManager] Converting 'ÖzelGün_Adı' to category...")
@@ -68,14 +92,23 @@ class DataManager:
         if 'Is_lockdown' in df.columns:
              df['Is_lockdown'] = df['Is_lockdown'].astype(int)
 
+        # dff: Difference (Fark)
+        """
+        df['Load_Diff_1h'] = df[RAW_TARGET_COL].diff(periods=1).shift(24) 
+        df['Load_Diff_24h'] = df[RAW_TARGET_COL].diff(periods=24).shift(24)
+        df['Temp_Slope_3h'] = df[BASE_TEMP_COL].diff(periods=3)
+        """
+
         # ----------------------------------------------------
-        # 5. Config'den Gelen Gereksiz Sütunları Atma
+        # 6. Config'den Gelen Gereksiz Sütunları Atma
         if COLS_TO_DROP:
             print(f"[DataManager] Dropping columns from config: {COLS_TO_DROP}")
             existing_drop_cols = [c for c in COLS_TO_DROP if c in df.columns]
             df.drop(columns=existing_drop_cols, inplace=True)
 
-        # 6. Eksik Verileri Çıkarma
+        
+
+        # 7. Eksik Verileri Çıkarma
         print(f"[DataManager] Dropping warm-up period ({WARMUP_PERIOD} rows)...")
         df = df.iloc[WARMUP_PERIOD:] 
         df.dropna(inplace=True)

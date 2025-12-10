@@ -34,10 +34,17 @@ class ModelManager:
         
         self.model = xgb.XGBRegressor(
             n_estimators=1000,
-            learning_rate=0.05,
-            max_depth=6,
-            subsample=0.8,
-            colsample_bytree=0.8,
+            
+            # --- OPTIMIZED PARAMS ---
+            learning_rate=0.06231706647330586,
+            max_depth=7,
+            subsample=0.8759040886292537,
+            colsample_bytree=0.9057080502657564,
+            min_child_weight=1,              # Eklendi
+            reg_alpha=1.2023461125941903,    # Eklendi (L1 Regularization)
+            reg_lambda=0.13223942361067817,  # Eklendi (L2 Regularization)
+            # ------------------------
+            
             objective='reg:squarederror', 
             eval_metric='mae',  
             enable_categorical=True, 
@@ -111,14 +118,6 @@ class ModelManager:
         df_imp = pd.DataFrame(list(importance.items()), columns=['Feature', 'Gain'])
         df_imp = df_imp.sort_values(by='Gain', ascending=False)
         
-        # --- 1. LİSTELEME ---
-        print("\n TOP 10 FEATURES:")
-        print(df_imp.head(10))
-        
-        print("\n GARBAGE FEATURES:")
-
-
-        # --- 2. GRAFİK ÇİZME ---
         plt.figure(figsize=(10, 6))
         # En önemli 20 özelliği çiz
         xgb.plot_importance(self.model, importance_type='gain', max_num_features=20, height=0.5, title='Feature Importance (Gain)')

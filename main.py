@@ -45,6 +45,8 @@ def main():
     
     mm_final = ModelManager()
     mm_final.train_model(X_train, y_train, X_test, y_test)
+    mm_final.evaluate(X_test, y_test)
+    mm_final.save_model()
     
     # 2. ÖZELLİK ÖNEMİNİ GÖSTER
     mm_final.get_feature_importance() # <-- İŞTE BU SATIR SANA GRAFİĞİ VERECEK
