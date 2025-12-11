@@ -94,32 +94,73 @@ class DataManager:
         df['Is_Summer_Break'] = df['Is_Summer_Break'].astype(int)
 
         # ----------------------------------------------------
-        # 4. YENİ ÖZELLİK MÜHENDİSLİĞİ (Gelişmiş Hava Durumu)
+        # 4. YENİ ÖZELLİK MÜHENDİSLİĞİ (Gelişmiş Hava Durumu & Aggregation)
         # ----------------------------------------------------
-        BASE_TEMP_COL = 'Hissedilen_Sıcaklık-MUGLA_MenteseCenter_OpenMeteo'
-        
-        if BASE_TEMP_COL in df.columns:
+        print("[DataManager] İl bazlı sıcaklık ortalamaları ve termal özellikler hesaplanıyor...")
+
+        # A. İL BAZLI ORTALAMALAR (AGGREGATION)
+        # Tek tek istasyonlar yerine il genelini temsil eden ortalamaları alıyoruz.
+        province_map = {
+            'MUGLA': 'Hissedilen_Sıcaklık_Mean_MUGLA',
+            'DNZ':   'Hissedilen_Sıcaklık_Mean_DNZ',
+            'AYD':   'Hissedilen_Sıcaklık_Mean_AYD'
+        }
+
+        cols_to_remove = []
+
+        # Her il için döngü
+        for province_code, new_col_name in province_map.items():
+            # O ilin kodunu ve 'Hissedilen_Sıcaklık' ismini içeren tüm sütunları bul
+            relevant_cols = [c for c in df.columns if province_code in c and 'Hissedilen_Sıcaklık' in c]
             
-            # 1A. Sıcaklığın Karesi (Non-Linear U-Eğrisi)
-            # Konfor sıcaklığını 18°C kabul edip uzaklığı hesaplıyoruz.
-            # Tüketimin, 18'den uzaklaştıkça artacağını vurgular.
+            if relevant_cols:
+                # Satır bazında (axis=1) ortalama alarak tek sütuna indir
+                df[new_col_name] = df[relevant_cols].mean(axis=1)
+                
+                # Orijinal kalabalık sütunları silinecekler listesine ekle
+                cols_to_remove.extend(relevant_cols)
+                print(f"   -> {new_col_name} oluşturuldu ({len(relevant_cols)} istasyon birleştirildi).")
+
+        # B. TEMİZLİK (Gürültü Azaltma)
+        # Orijinal 14 sütunu kaldırıp yerine 3 temiz sütun bırakıyoruz.
+        if cols_to_remove:
+            df.drop(columns=cols_to_remove, inplace=True)
+        
+        # C. TERMAL ÖZELLİKLER İÇİN "BAZ" SÜTUN SEÇİMİ
+        # Eskiden 'MenteseCenter' kullanıyorduk, artık 'Muğla Ortalaması'nı kullanacağız.
+        # Eğer Muğla yoksa Denizli'yi, o da yoksa Aydın'ı dener.
+        available_means = [
+            'Hissedilen_Sıcaklık_Mean_MUGLA', 
+            'Hissedilen_Sıcaklık_Mean_DNZ', 
+            'Hissedilen_Sıcaklık_Mean_AYD'
+        ]
+        
+        # Listeden veri setinde var olan ilk sütunu seç
+        BASE_TEMP_COL = next((col for col in available_means if col in df.columns), None)
+        
+        if BASE_TEMP_COL:
+            print(f"   -> Termal özellikler için baz alınan sütun: {BASE_TEMP_COL}")
+            
+            # 1. Sıcaklığın Karesi (U-Eğrisi)
+            # Konfor sıcaklığından (18) uzaklaştıkça değer büyür (Klima/Isıtma etkisi)
             df['Temp_Squared_18'] = (df[BASE_TEMP_COL] - 18) ** 2
             
-            # 1B. Termal Atalet (Sıcaklık Lag'leri)
-            # Binaların geç tepki verme süresini yakalar.
+            # 2. Termal Atalet (Sıcaklık Lag'leri)
+            # Binaların ısınma/soğuma gecikmesi
             for lag in [3, 6, 12]:
-                new_col_name = f'Temp_Lag{lag}h'
-                
-                # 'shift' fonksiyonu, veriyi belirtilen adım kadar aşağı kaydırarak
-                # geçmişteki değeri şimdiki satıra getirir.
-                df[new_col_name] = df[BASE_TEMP_COL].shift(lag)
-                
-            print("   -> Temp_Squared_18, Temp_Lag3h/6h/12h eklendi.")
+                df[f'Temp_Lag{lag}h'] = df[BASE_TEMP_COL].shift(lag)
+            
+            # 3. [ÖNEMLİ] LAG TUZAĞINI KIRAN "DELTA" ÖZELLİKLERİ
+            # Modelin "Dün hava nasıldı?" yerine "Hava dünden ne kadar değişti?" sorusunu cevaplaması için.
+            df['Temp_Diff_24h'] = df[BASE_TEMP_COL] - df[BASE_TEMP_COL].shift(24)
+            df['Temp_Diff_3h'] = df[BASE_TEMP_COL].diff(3)
+
+            print("   -> Temp_Squared, Lags ve Temp_Diff (Delta) özellikleri eklendi.")
         else:
-            print(f"   -> UYARI: {BASE_TEMP_COL} sütunu bulunamadı, Termal Özellikler oluşturulamadı.")
+            print("   -> UYARI: Hiçbir sıcaklık ortalaması oluşturulamadı! Termal özellikler atlanıyor.")
+
 
             
-
         # ----------------------------------------------------
         # 5. Kategorik Veri İşleme
         # Özel Günler -> Category
