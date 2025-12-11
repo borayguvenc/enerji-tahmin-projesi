@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
+
 # ---------------------------------------------------------
 # 1. YOL AYARLARI (SRC KLASÖRÜNE ERİŞİM)
 # ---------------------------------------------------------
@@ -23,6 +24,7 @@ from src.evaluator import Evaluator
 from src.model_manager import ModelManager       # XGBoost
 from src.lightgbm_manager import LightGBMManager # LightGBM
 from src.catboost_manager import CatBoostManager # CatBoost
+from src.reporter import save_detailed_results
 
 # ---------------------------------------------------------
 # 3. YARDIMCI FONKSİYONLAR
@@ -43,7 +45,7 @@ def calculate_metrics(y_true, y_pred, model_name="Ensemble"):
 
 
 def main():
-    print("🚀 SİSTEM BAŞLATILIYOR...\n")
+    print(" SİSTEM BAŞLATILIYOR...\n")
 
     # A. MOD SEÇİMİ (Argüman veya Kullanıcı Girdisi)
     parser = argparse.ArgumentParser()
@@ -120,40 +122,39 @@ def main():
     elif mode == 'ALL':
         print("\n--- 🚀 GRAND ENSEMBLE MODU (XGB + LGBM + CAT) ---")
         
-        # 1. XGBoost
-        print(">>> 1/3 XGBoost Eğitiliyor ve Kaydediliyor...")
-        xgb_man = ModelManager()
-        xgb_man.train_model(X_train, y_train, X_test, y_test)
-        pred_xgb = xgb_man.model.predict(X_test)
-        xgb_man.save_model("ensemble_xgb.json") # <-- KAYIT 1
-
-        # 2. LightGBM
-        print("\n>>> 2/3 LightGBM Eğitiliyor ve Kaydediliyor...")
-        lgbm_man = LightGBMManager()
-        lgbm_man.train_model(X_train, y_train, X_test, y_test)
-        pred_lgbm = lgbm_man.model.predict(X_test)
-        lgbm_man.save_model("ensemble_lgbm.txt") # <-- KAYIT 2
-
-        # 3. CatBoost
-        print("\n>>> 3/3 CatBoost Eğitiliyor ve Kaydediliyor...")
-        cat_man = CatBoostManager()
-        cat_man.train_model(X_train, y_train, X_test, y_test)
-        pred_cat = cat_man.model.predict(X_test)
-        cat_man.save_model("ensemble_cat.cbm") # <-- KAYIT 3
-
-        # ORTALAMA
-        final_preds = (pred_xgb + pred_lgbm + pred_cat) / 3
-
-        # SONUÇ
-        print("\n🏆 GRAND ENSEMBLE SONUÇLARI (SON AY) 🏆")
-        calculate_metrics(y_test, final_preds, model_name="Triple Ensemble (XGB+LGBM+CAT)")
+        # 1. CROSS VALIDATION (12 Aylık Tahminleri Topla)
+        print("\n[Adım 1] Tüm Yıl İçin Cross Validation Çalıştırılıyor...")
         
-        # Meraklısına: Kim ne tahmin etti? (İlk satır örneği)
-        print(f"XGBoost  İlk Tahmin : {pred_xgb[0]:.2f}")
-        print(f"LightGBM İlk Tahmin : {pred_lgbm[0]:.2f}")
-        print(f"CatBoost İlk Tahmin : {pred_cat[0]:.2f}")
-        print(f"ORTALAMA (SONUÇ)    : {final_preds[0]:.2f}")
-        print(f"GERÇEK DEĞER        : {y_test.iloc[0]:.2f}")
+        # ARTIK 2 ŞEY DÖNÜYOR: Skorlar VE Tüm Tahminler
+        scores, full_year_results = evaluator.run_cross_validation(X_full, y_full, model_type='ALL')
+        
+        evaluator.print_summary(scores)
+
+        # ---------------------------------------------------------
+        # 2. TÜM YIL RAPORU (Excel) 📊
+        # ---------------------------------------------------------
+        print("\n[Adım 2] Yıllık Detaylı Rapor Hazırlanıyor...")
+        
+        # Reporter'a göndermek için paketle
+        # full_year_results DataFrame'inden sütunları çekiyoruz
+        predictions_pack = {
+            'Grand_Ensemble': full_year_results['Ensemble_Pred'],
+            'XGBoost_Detail': full_year_results['XGB_Pred'],
+            'LightGBM_Detail': full_year_results['LGBM_Pred'],
+            'CatBoost_Detail': full_year_results['CAT_Pred']
+        }
+        
+        # Gerçek değerler (Index tarih olduğu için eşleşir)
+        y_true_full = full_year_results['Actual']
+        
+        # Kaydet
+        save_detailed_results(
+            y_true=y_true_full,
+            predictions_dict=predictions_pack,
+            project_root=current_dir,
+            filename="YILLIK_DEV_RAPOR.xlsx"
+        )
+    
 
 if __name__ == "__main__":
     main()

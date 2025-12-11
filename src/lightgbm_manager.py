@@ -32,14 +32,21 @@ class LightGBMManager:
         # Kategorik değişkenleri otomatik tanır ama biz int'e çevirdiğimiz için sorun yok.
         
         self.model = lgb.LGBMRegressor(
-            n_estimators=1000,
-            learning_rate=0.05,      # Başlangıç için güvenli bir hız
-            num_leaves=31,           # LightGBM'in en kritik parametresi (31 standarttır)
-            max_depth=-1,            # Limit yok (Leaf-wise büyüme için)
+            # 1. Sabit Ayarlar
+            n_estimators=2000,       # Kapasiteyi yüksek tutuyoruz, early_stopping nerede duracağını bilir.
             objective='regression',
             n_jobs=-1,
             random_state=42,
-            importance_type='gain'   # Feature Importance için
+            importance_type='gain',
+            
+            learning_rate=0.05074154948325871,
+            num_leaves=30,           # Ağaç karmaşıklığı
+            max_depth=6,             # Derinlik limiti (Overfitting freni)
+            min_child_samples=28,    # Bir yaprakta en az 28 veri olsun
+            subsample=0.813694299293671,         # Satırların %81'ini kullan
+            colsample_bytree=0.6293259247827979, # Sütunların %63'ünü kullan (Çeşitlilik için süper)
+            reg_alpha=7.73076167663075,          # L1 Regularization (Gürültü temizliği)
+            reg_lambda=2.116570077959441         # L2 Regularization
         )
 
         print(f"[LightGBMManager] Training started on {len(X_train)} samples...")

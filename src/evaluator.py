@@ -27,13 +27,24 @@ class Evaluator:
 
     def run_cross_validation(self, X, y, model_type='XGB'):
         """
-        model_type: 'XGB', 'LGBM', 'CAT', 'ALL'
+        Hem skorları hem de birleştirilmiş tüm tahminleri döndürür.
+        Return: (cv_scores, full_predictions_df)
         """
         print(f"\n [Evaluator] Cross Validation Başlıyor ({self.n_splits} Fold)...")
         print(f" Model Tipi: {model_type}")
         
         cv_scores = []
         fold = 1
+
+        # KUMBARA: Tüm tahminleri burada biriktireceğiz
+        storage = {
+            'Date': [],
+            'Actual': [],
+            'XGB_Pred': [],
+            'LGBM_Pred': [],
+            'CAT_Pred': [],
+            'Ensemble_Pred': []
+        }
 
         for train_index, test_index in self.tscv.split(X):
             # 1. Veriyi Böl
@@ -44,53 +55,87 @@ class Evaluator:
             test_end = X_test.index.max()
             print(f" Fold {fold}/{self.n_splits} | Test Dönemi: {test_start} -> {test_end}")
 
-            # -------------------------------------------------
-            # ENSEMBLE MODU (HER FOLD İÇİN 3 MODEL EĞİT)
-            # -------------------------------------------------
+            # Tarihleri ve Gerçek Değerleri Sakla
+            storage['Date'].extend(X_test.index)
+            storage['Actual'].extend(y_test.values)
+
+            # Geçici değişkenler (Eğer model çalışmazsa None kalmasın diye)
+            p_xgb = np.zeros(len(y_test))
+            p_lgbm = np.zeros(len(y_test))
+            p_cat = np.zeros(len(y_test))
+
+            # --- MODEL EĞİTİM VE TAHMİN ---
+            
+            # Eğer Mod 'ALL' ise hepsini eğit
             if model_type == 'ALL':
-                # 1. XGBoost
+                # XGBoost
                 mm = ModelManager()
                 mm.train_model(X_train, y_train, X_test, y_test)
-                p1 = mm.model.predict(X_test)
-                
-                # 2. LightGBM
+                p_xgb = mm.model.predict(X_test)
+
+                # LightGBM
                 lgbm = LightGBMManager()
                 lgbm.train_model(X_train, y_train, X_test, y_test)
-                p2 = lgbm.model.predict(X_test)
-                
-                # 3. CatBoost
+                p_lgbm = lgbm.model.predict(X_test)
+
+                # CatBoost
                 cat = CatBoostManager()
                 cat.train_model(X_train, y_train, X_test, y_test)
-                p3 = cat.model.predict(X_test)
+                p_cat = cat.model.predict(X_test)
+
+                # Ensemble
+                p_ensemble = (p_xgb + p_lgbm + p_cat) / 3
                 
-                # Ortalama Al
-                preds = (p1 + p2 + p3) / 3
-                
-            # -------------------------------------------------
-            # TEKLİ MODLAR
-            # -------------------------------------------------
+                # Kumbaraya At
+                storage['XGB_Pred'].extend(p_xgb)
+                storage['LGBM_Pred'].extend(p_lgbm)
+                storage['CAT_Pred'].extend(p_cat)
+                storage['Ensemble_Pred'].extend(p_ensemble)
+
+                final_preds_for_score = p_ensemble
+
+            # Eğer Tekli Mod ise (Örn: Sadece XGB)
             else:
                 if model_type == 'XGB':
-                    manager = ModelManager()
+                    man = ModelManager()
+                    man.train_model(X_train, y_train, X_test, y_test)
+                    preds = man.model.predict(X_test)
                 elif model_type == 'LGBM':
-                    manager = LightGBMManager()
+                    man = LightGBMManager()
+                    man.train_model(X_train, y_train, X_test, y_test)
+                    preds = man.model.predict(X_test)
                 elif model_type == 'CAT':
-                    manager = CatBoostManager()
-                else:
-                    raise ValueError(f"Geçersiz model tipi: {model_type}")
+                    man = CatBoostManager()
+                    man.train_model(X_train, y_train, X_test, y_test)
+                    preds = man.model.predict(X_test)
                 
-                manager.train_model(X_train, y_train, X_test, y_test)
-                preds = manager.model.predict(X_test)
-            
-            # 5. Skor Hesapla
-            mape = calculate_mape(y_test, preds)
+                final_preds_for_score = preds
+                
+                # Tekli modda diğerlerini boş geçiyoruz (veya aynısını yazıyoruz)
+                # Mantık hatası olmasın diye tekli modda sadece ensemble kolonuna yazıyorum
+                storage['Ensemble_Pred'].extend(preds)
+
+            # Skor Hesapla
+            mape = calculate_mape(y_test, final_preds_for_score)
             cv_scores.append(mape)
             
             print(f"  Fold {fold} MAPE: %{mape:.2f}")
             print("  --------------------------------------------------")
             fold += 1
 
-        return cv_scores
+        # Döngü Bitti: Kumbarayı DataFrame'e çevir
+        # Eğer tekli moddaysa diğer sütunlar boş kalabilir, sorun değil.
+        full_df = pd.DataFrame({
+            'Actual': storage['Actual'],
+            'Ensemble_Pred': storage['Ensemble_Pred']
+        }, index=storage['Date'])
+
+        if model_type == 'ALL':
+            full_df['XGB_Pred'] = storage['XGB_Pred']
+            full_df['LGBM_Pred'] = storage['LGBM_Pred']
+            full_df['CAT_Pred'] = storage['CAT_Pred']
+
+        return cv_scores, full_df
 
     def print_summary(self, scores):
         mean_score = np.mean(scores)
