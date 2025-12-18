@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os 
 import sys
+from src.smart_features import SmartFeatureEngineer
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)            
@@ -58,6 +59,7 @@ class DataManager:
             if tf in df.columns:
                 df[tf] = df[tf].astype(int)
         
+        
         # ----------------------------------------------------
         # [ADIM 2] OKUL TATİLLERİNİ AYRIŞTIRMA (Yaz vs Kış)
         # ----------------------------------------------------
@@ -93,6 +95,9 @@ class DataManager:
         df['Is_Semester'] = df['Is_Semester'].astype(int)
         df['Is_Summer_Break'] = df['Is_Summer_Break'].astype(int)
 
+
+
+        
         # ----------------------------------------------------
         # 4. YENİ ÖZELLİK MÜHENDİSLİĞİ (Gelişmiş Hava Durumu & Aggregation)
         # ----------------------------------------------------
@@ -159,7 +164,6 @@ class DataManager:
         else:
             print("   -> UYARI: Hiçbir sıcaklık ortalaması oluşturulamadı! Termal özellikler atlanıyor.")
 
-
             
         # ----------------------------------------------------
         # 5. Kategorik Veri İşleme
@@ -178,11 +182,8 @@ class DataManager:
                 # 1. Her ihtimale karşı eksik varsa 0 yap (Sen eksik yok dedin ama güvenliktir)
                 df[col] = df[col].fillna(0)
                 
-                # 2. Tipini 'int' (Tamsayı) yap. BU ÇOK ÖNEMLİ!
-                # Böylece 1.0 veya "1" gibi karışıklıklar düzelir, XGBoost hızlanır.
+                # 2. Tipini 'int' (Tamsayı) yap.
                 df[col] = df[col].astype(int)
-                
-                # print(f"   -> '{col}' sütunu başarıyla int tipine çevrildi.")
             else:
                 print(f"   -> UYARI: '{col}' sütunu Excel'de bulunamadı! İsmi doğru yazdın mı?")
 
@@ -193,6 +194,28 @@ class DataManager:
             df[RAW_TARGET_COL].shift(48) + 
             df[RAW_TARGET_COL].shift(72)
         ) / 3
+
+
+        # ----------------------------------------------------
+        # 6. AKILLI KOMŞU ÖZELLİĞİ (SMART NEIGHBOR FEATURE)
+        # ----------------------------------------------------
+        """
+        smart_engineer = SmartFeatureEngineer(df)
+        
+        # Aday sıcaklık sütunlarını verelim (Varsa ortalamayı, yoksa Menteşe'yi kullanır)
+        temp_candidates = [
+            'Hissedilen_Sıcaklık_Mean_MUGLA', 
+            'Hissedilen_Sıcaklık-MUGLA_MenteseCenter_OpenMeteo'
+        ]
+        
+        # İşlemi yap ve df'i güncelle
+        df = smart_engineer.add_smart_neighbor_feature(
+            target_col=RAW_TARGET_COL, 
+            temp_col_candidates=temp_candidates
+        )
+        """
+
+
 
         # 6. Config'den Gelen Gereksiz Sütunları Atma
         if COLS_TO_DROP:

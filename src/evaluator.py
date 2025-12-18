@@ -8,6 +8,7 @@ import os
 from src.model_manager import ModelManager       # XGBoost
 from src.lightgbm_manager import LightGBMManager # LightGBM
 from src.catboost_manager import CatBoostManager # CatBoost
+from src.catboost_bayram_manager import CatBoostBayramManager # CatBoost Sniper
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
@@ -106,6 +107,10 @@ class Evaluator:
                     preds = man.model.predict(X_test)
                 elif model_type == 'CAT':
                     man = CatBoostManager()
+                    man.train_model(X_train, y_train, X_test, y_test)
+                    preds = man.model.predict(X_test)
+                elif model_type == 'SNIPER':
+                    man = CatBoostBayramManager()
                     man.train_model(X_train, y_train, X_test, y_test)
                     preds = man.model.predict(X_test)
                 

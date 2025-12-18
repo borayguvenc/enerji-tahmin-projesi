@@ -50,12 +50,43 @@ class LightGBMManager:
         )
 
         print(f"[LightGBMManager] Training started on {len(X_train)} samples...")
-        
+
+        """
+        # --- ADIM 2: CEZALARI ARTIR (Katsayılar) ---
+        weights = np.ones(len(X_train))
+        # A. Ramazan Günleri (Örn: 3 Kat Önemli)
+        if 'Is_Ramadan' in X_train.columns:
+            # Sütunu bul ve maske oluştur
+            mask = (X_train['Is_Ramadan'] == 1).values
+            weights[mask] *= 3.0
+            
+        # B. Sahur Saatleri (Örn: 5 Kat Önemli - Gece hatalarını düzeltmek için)
+        if 'Is_Sahur' in X_train.columns:
+            mask = (X_train['Is_Sahur'] == 1).values
+            weights[mask] *= 5.0
+            
+        # C. Milli/Dini Bayramlar (Örn: 10 Kat Önemli - Mart sonundaki çukuru düzeltmek için)
+        if 'Milli_Bayram' in X_train.columns: # Sütun adın 'Is_Holiday' ise onu yaz
+            mask = (X_train['Milli_Bayram'] == 1).values
+            weights[mask] *= 10.0
+            
+        if 'Kurban_Bayram' in X_train.columns:
+            mask = (X_train['Kurban_Bayram'] == 1).values
+            weights[mask] *= 10.0
+
+        # D. Mart Soğukları (Eğer data_manager'da eklediysen)
+        if 'March_Heating_Degree' in X_train.columns:
+            # Soğuk varsa (Değer 0'dan büyükse) ağırlığı artır
+            mask = (X_train['March_Heating_Degree'] > 0).values
+            weights[mask] *= 2.0
+        """
+
         # LightGBM eğitim formatı
         self.model.fit(
             X_train, y_train,
             eval_set=[(X_test, y_test)],
             eval_metric='mae',
+            #sample_weight=weights,
             callbacks=[
                 lgb.early_stopping(stopping_rounds=50),
                 lgb.log_evaluation(period=100)
