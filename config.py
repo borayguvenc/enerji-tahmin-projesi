@@ -14,9 +14,12 @@ RAW_HOUR_COL = "Saat"
 
 
 
+
 # --- DROP LIST ---
 # Normal mod için çıkarılacak sütunlar listesi. 
 COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", "Ay_Sin", "Ay_Cos", "Saat_Sin", "Saat_Cos", "Rolling_Mean_3h", "Rolling_Mean_168h", "ÖzelGün_Adı"]
+
+
 """
 
 
@@ -53,8 +56,8 @@ COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", 
                 "AYD_OSB_Dark_Fraction_Pct",
                 "AYD_BuyukMenderes_Dark_Fraction_Pct",
                 "AYD_BozdoganMadran_Dark_Fraction_Pct"]
-                
-"""
+        """        
+
 
 
 ""","ÖzelGün_Adı","DNZ_Honaz_Dark_Fraction_Pct",
@@ -79,9 +82,9 @@ COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", 
     """
 
 # --- MODEL PARAMETERS ---
-TEST_SIZE = 24 * 30 # Last 120 days for testing
+TEST_SIZE = 24 # Last 120 days for testing
 WARMUP_PERIOD = 504  # To handle NaN values caused by the largest lag (Lag504)
-NUM_OF_SPLITS = 12   # Number of folds for Time Series Cross Validation
+NUM_OF_SPLITS = 365   # Number of folds for Time Series Cross Validation
 
 
 

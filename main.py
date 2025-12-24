@@ -169,7 +169,7 @@ def main():
             notes="Ensemble Run"
         )
 
-        """
+        
         # 3. Yıllık Rapor (Excel)
         print("\n[Rapor] Yıllık Detaylı Excel Hazırlanıyor...")
         
@@ -186,9 +186,9 @@ def main():
             y_true=y_true_full,
             predictions_dict=predictions_pack,
             project_root=current_dir,
-            filename="YILLIK_DEV_RAPOR.xlsx"
+            filename="YILLIK_DENEME_BAYRAM_AFTER.xlsx"
         )
-        """
+        
     elif mode == 'SNIPER':
         # --- MOD 5: SNIPER (BAYRAM) MODELİ ---
         print("\n--- 🦅 Sniper Model Devrede ---")

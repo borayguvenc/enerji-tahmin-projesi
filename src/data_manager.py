@@ -21,6 +21,7 @@ from config import (
 class DataManager:
     def __init__(self):
         self.data = None
+        self.RAW_TARGET_COL = RAW_TARGET_COL
         
     def load_and_preprocess(self):
         """
@@ -163,7 +164,21 @@ class DataManager:
             print("   -> Temp_Squared, Lags ve Temp_Diff (Delta) özellikleri eklendi.")
         else:
             print("   -> UYARI: Hiçbir sıcaklık ortalaması oluşturulamadı! Termal özellikler atlanıyor.")
-
+    
+        
+        # Referans sıcaklıklar (Türkiye standartlarına göre)
+        # Isıtma sınırı: 16°C (Bunun altı kombi yakar)
+        # Soğutma sınırı: 24°C (Bunun üstü klima açar)
+        
+        # HDD: Isıtma İhtiyacı
+        df['HDD_Heating_Stress'] = np.maximum(0, 16 - df[BASE_TEMP_COL])
+        
+        # CDD: Soğutma İhtiyacı 
+        df['CDD_Cooling_Stress'] = np.maximum(0, df[BASE_TEMP_COL] - 24)
+        
+        # Uç Değerlerin Karesi (Şiddeti artırmak için)
+        df['Extreme_Heat_Impact'] = df['CDD_Cooling_Stress'] ** 2
+        df['Extreme_Cold_Impact'] = df['HDD_Heating_Stress'] ** 2
             
         # ----------------------------------------------------
         # 5. Kategorik Veri İşleme
@@ -186,6 +201,14 @@ class DataManager:
                 df[col] = df[col].astype(int)
             else:
                 print(f"   -> UYARI: '{col}' sütunu Excel'de bulunamadı! İsmi doğru yazdın mı?")
+
+        """
+        # ----------------------------------------------------------------
+        # OUTLIER TEMİZLİĞİ (LAGLERDEN ÖNCE YAPILMALI!)
+        # ----------------------------------------------------------------
+        self.clean_seasonal_outliers(window_days=14, threshold=3.5)
+
+        """
 
         # Son 3 günün aynı saatinin ortalaması (Dün 14:00 + Evvelsi 14:00 + ...)
         # (Lag24 + Lag48 + Lag72) / 3
@@ -216,7 +239,7 @@ class DataManager:
         """
 
 
-
+        
         # 6. Config'den Gelen Gereksiz Sütunları Atma
         if COLS_TO_DROP:
             print(f"[DataManager] Dropping columns from config: {COLS_TO_DROP}")
@@ -237,6 +260,78 @@ class DataManager:
         print(df.dtypes)
         
         return self.data
+    
+    """
+    def clean_seasonal_outliers(self, window_days=14, threshold=3.5):
+        
+       
+        #  Zeki Outlier Temizliği:
+        # 1. Sadece 'Normal' günlerdeki teknik hataları temizler.
+        #2. Özel günlere (Bayram, Ramazan vb.) DOKUNMAZ.
+        
+        print(f"[DataManager] Mevsimsel Outlier temizliği yapılıyor (Özel Günler Korumalı)...")
+        
+        col = self.RAW_TARGET_COL
+        
+        # --- ADIM 1: DOKUNULMAZLIK LİSTESİ OLUŞTUR ---
+        # Bu günlerde tüketim ne kadar saparsa sapsın, bu bir veri hatası değil,
+        # modelin öğrenmesi gereken bir 'davranış'tır.
+        
+        special_day_cols = [
+            'Is_Ramadan', 'Ramazan_Bayram', 'Kurban_Bayram', 
+            'Milli_Bayram', 'Is_Sahur', 'Yilbasi', 'Secim_Gunu', 'Is_lockdown'
+        ]
+        
+        # Başlangıçta kimse korumalı değil (Hepsi False)
+        is_protected = pd.Series(False, index=self.data.index)
+        
+        for p_col in special_day_cols:
+            if p_col in self.data.columns:
+                # Eğer o sütunda 1 varsa, o satır korumalıdır
+                is_protected |= (self.data[p_col] == 1)
+
+        # Haftasonlarına da dokunmasın (Opsiyonel ama önerilir)
+        if 'Haftanın_Günü' in self.data.columns:
+             # Eğer kategori ise koduna bakmak lazım ama genelde sayısal çevirmiştik
+             # Veya hafta sonu flag'in varsa onu kullan. Yoksa şimdilik kalsın.
+             pass
+
+        print(f"   -> {is_protected.sum()} saatlik veri 'Özel Gün' olduğu için korumaya alındı.")
+
+        # --- ADIM 2: ROLLING Z-SCORE HESABI ---
+        indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=window_days)
+        grouped = self.data.groupby('Saat')[col]
+        
+        local_mean = grouped.transform(lambda x: x.shift(1).rolling(window=window_days, min_periods=7).mean())
+        local_std = grouped.transform(lambda x: x.shift(1).rolling(window=window_days, min_periods=7).std())
+        
+        z_score = (self.data[col] - local_mean) / local_std
+        
+        # --- ADIM 3: AKILLI FİLTRELEME ---
+        # Bir verinin outlier sayılması için 2 şart lazım:
+        # 1. Z-Score eşiği geçmiş olmalı (Anormal olmalı)
+        # 2. VE Korumalı bir gün OLMAMALI (Normal bir gün olmalı)
+        
+        raw_outlier_mask = np.abs(z_score) > threshold
+        
+        # İşte sihirli satır burası:
+        final_outlier_mask = raw_outlier_mask & (~is_protected)
+        
+        outlier_count = final_outlier_mask.sum()
+        ignored_count = raw_outlier_mask.sum() - outlier_count
+        
+        if outlier_count > 0:
+            print(f"   -> {outlier_count} adet teknik outlier tespit edildi ve temizlendi.")
+            print(f"   -> {ignored_count} adet anormallik 'Özel Gün' olduğu için SİLİNMEDİ (Doğrusu bu).")
+            
+            # Tamir Et
+            self.data.loc[final_outlier_mask, col] = np.nan
+            self.data[col] = self.data[col].interpolate(method='time')
+        else:
+            print("   -> Temiz. Müdahale edilecek outlier bulunamadı.")
+            
+        return self.data
+         """
 
     def get_train_test_split(self):
         if self.data is None:
