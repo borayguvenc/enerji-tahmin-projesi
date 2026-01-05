@@ -32,31 +32,15 @@ class CatBoostBayramManager:
         Arife ve Bayramlar: x100 puan!
         """
         weights = np.ones(len(X_train))
-        
 
-        """
-        # 1. Hafta Sonu (Biraz önemli)
-        if 'Haftanın_Günü' in X_train.columns:
-            # 5: Cumartesi, 6: Pazar (Eğer 0-6 ise 5-6, 1-7 ise 6-7 kontrol et)
-            weekend_mask = X_train['Haftanın_Günü'].isin([5, 6])
-            weights[weekend_mask] = 5.0
-        """
-
-        # 2. Milli Bayramlar (Önemli)
-        if 'Milli_Bayram' in X_train.columns:
-            weights[X_train['Milli_Bayram'] == 1] = 40.0
-
-        if 'Is_Ramadan' in X_train.columns:
-            weights[X_train['Is_Ramadan'] == 1] = 10.0
-            
-        # 3. Dini Bayramlar
-        # Ramazan ve Kurban Bayramı'na devasa ağırlık veriyoruz.
+        # Bayramlarda hata yapmanın maliyetini modele 5-10 kat daha fazla hissettir
         if 'Ramazan_Bayram' in X_train.columns:
-            weights[X_train['Ramazan_Bayram'] == 1] = 100.0
-            
+            weights[X_train['Ramazan_Bayram'] == 1] *= 10.0
         if 'Kurban_Bayram' in X_train.columns:
-            weights[X_train['Kurban_Bayram'] == 1] = 1.0
-            
+            weights[X_train['Kurban_Bayram'] == 1] *= 10.0
+        if 'Is_Eve' in X_train.columns: # Arife eklediğini varsayıyorum
+            weights[X_train['Is_Eve'] == 1] *= 5.0
+                    
         # Varsa Arife günleri (Genelde bayramdan önceki gün düşüş başlar)
 
         print(f"[Sniper] Ağırlıklar ayarlandı. Max Ağırlık: {weights.max()}")

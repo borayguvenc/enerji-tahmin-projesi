@@ -1,7 +1,7 @@
 import sys
 import os
 import argparse
-import numpy as np
+import numpy as np                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
@@ -15,10 +15,10 @@ sys.path.append(src_path)
 # ---------------------------------------------------------
 # 2. İMPORTLAR
 # ---------------------------------------------------------
-from config import (NUM_OF_SPLITS, TEST_SIZE, RAW_TARGET_COL)
+from config import (NUM_OF_SPLITS, TEST_SIZE, RAW_TARGET_COL, REPORT_FILENAME)
 from src.data_manager import DataManager
 from src.evaluator import Evaluator
-from src.catboost_bayram_manager import CatBoostBayramManager
+
 from src.experiment_logger import ExperimentLogger  # <--- LOGGER
 from src.reporter import save_detailed_results      # <--- EXCEL RAPOR
 
@@ -26,13 +26,14 @@ from src.reporter import save_detailed_results      # <--- EXCEL RAPOR
 from src.model_manager import ModelManager       # XGBoost
 from src.lightgbm_manager import LightGBMManager # LightGBM
 from src.catboost_manager import CatBoostManager # CatBoost
+from src.catboost_manager_tuned import CatBoostManagerTuned # CatBoost weighted
 
 def main():
     print("🚀 SİSTEM BAŞLATILIYOR...\n")
 
     # A. MOD SEÇİMİ
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, default=None, help='Mod: XGB, LGBM, CAT, ALL')
+    parser.add_argument('--mode', type=str, default=None, help='Mod: XGB, LGBM, CAT, CAT_TUNED, ALL')
     args = parser.parse_args()
 
     if args.mode:
@@ -42,17 +43,19 @@ def main():
         print("1. XGB  (Sadece XGBoost)")
         print("2. LGBM (Sadece LightGBM)")
         print("3. CAT  (Sadece CatBoost)")
-        print("4. ALL  (Grand Ensemble: XGB + LGBM + CAT)")
+        print("4. CAT_TUNED  (Ağırlıklı CatBoost)")
+        print("5. ALL  (Grand Ensemble: XGB + LGBM + CAT + CAT_TUNED)")
         
-        selection = input("Seçiminiz (XGB/LGBM/CAT/ALL): ").upper()
+        selection = input("Seçiminiz (XGB/LGBM/CAT/CAT_TUNED/ALL): ").upper()
         
         if selection in ['1', 'XGB']: mode = 'XGB'
         elif selection in ['2', 'LGBM']: mode = 'LGBM'
         elif selection in ['3', 'CAT']: mode = 'CAT'
-        elif selection in ['4', 'ALL', 'BOTH']: mode = 'ALL'
+        elif selection in ['4', 'CAT_TUNED']: mode = 'CAT_TUNED'
+        elif selection in ['5', 'ALL', 'BOTH']: mode = 'ALL'
         else: 
-            print("Geçersiz seçim! Varsayılan olarak XGB çalıştırılıyor.")
-            mode = 'XGB'
+            print("Geçersiz seçim! Varsayılan olarak ALL çalıştırılıyor.")
+            mode = 'ALL'
 
     print(f"\n[SİSTEM] Çalışma Modu: {mode}\n")
 
@@ -152,7 +155,28 @@ def main():
         cat.evaluate(X_test, y_test)
         cat.save_model("final_catboost.cbm")
 
-    # --- MOD 4: GRAND ENSEMBLE (HEPSİ) ---
+    # --- MOD 4: CAT_TUNED ---
+    elif mode == 'CAT_TUNED':
+        print("\n--- 🔍 CatBoost Cross Validation -> TUNED ---")
+        scores, _ = evaluator.run_cross_validation(X_full, y_full, model_type='CAT_TUNED')
+        evaluator.print_summary(scores)
+        
+        # LOGLAMA (Solo)
+        logger.log_experiment(
+            model_name="CatBoost_Tuned_Solo",
+            mape_scores=scores,
+            config_dict=config_pack,
+            notes="Single Model Run"
+        )
+
+        print("\n--- 💾 CatBoost Final Training & Saving ---")
+        cat_tuned = CatBoostManagerTuned()
+        cat_tuned.train_model(X_train, y_train, X_test, y_test)
+        cat_tuned.evaluate(X_test, y_test)
+        cat_tuned.save_model("final_catboost_tuned.cbm")
+
+
+    # --- MOD 5: GRAND ENSEMBLE (HEPSİ) ---
     elif mode == 'ALL':
         print("\n--- 🚀 GRAND ENSEMBLE MODU (XGB + LGBM + CAT) ---")
         
@@ -186,7 +210,7 @@ def main():
             y_true=y_true_full,
             predictions_dict=predictions_pack,
             project_root=current_dir,
-            filename="YILLIK_DENEME_BAYRAM_AFTER.xlsx"
+            filename=REPORT_FILENAME
         )
         
     elif mode == 'SNIPER':

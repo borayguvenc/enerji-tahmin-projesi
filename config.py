@@ -12,12 +12,15 @@ RAW_TARGET_COL = "ADM_Dağıtılan_Enerji_(MWh)"
 RAW_DATE_COL = "Tarih"
 RAW_HOUR_COL = "Saat"
 
+DATA_START_DATE = None         # Örn: '2024-01-01' (string veya None)
+DATA_END_DATE   = None # Örn: '2025-04-01' 
 
 
+REPORT_FILENAME = "YILLIK_DENEME_FORECAST.xlsx"
 
 # --- DROP LIST ---
 # Normal mod için çıkarılacak sütunlar listesi. 
-COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", "Ay_Sin", "Ay_Cos", "Saat_Sin", "Saat_Cos", "Rolling_Mean_3h", "Rolling_Mean_168h", "ÖzelGün_Adı"]
+COLS_TO_DROP = [ "Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", "Ay_Sin", "Ay_Cos", "Saat_Sin", "Saat_Cos", "Rolling_Mean_3h", "Rolling_Mean_168h","ÖzelGün_Adı"]
 
 
 """

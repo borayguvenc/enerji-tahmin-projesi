@@ -15,7 +15,9 @@ from config import (
     RAW_HOUR_COL, 
     COLS_TO_DROP,
     WARMUP_PERIOD, 
-    TEST_SIZE
+    TEST_SIZE,
+    DATA_START_DATE,
+    DATA_END_DATE
 )
 
 class DataManager:
@@ -48,6 +50,19 @@ class DataManager:
         # ----------------------------------------------------
         # 3. Tarih ve Saat İşlemleri
         df[RAW_DATE_COL] = pd.to_datetime(df[RAW_DATE_COL])
+
+        # --- [YENİ] ZAMANSAL FİLTRELEME ---
+        # Config'den gelen string tarihleri datetime objesine çevirerek karşılaştıralım
+        if DATA_START_DATE:
+            start_dt = pd.to_datetime(DATA_START_DATE)
+            df = df[df[RAW_DATE_COL] >= start_dt]
+            print(f"[DataManager] Filtre Uygulandı: {DATA_START_DATE} sonrası veriler alınıyor.")
+
+        if DATA_END_DATE:
+            end_dt = pd.to_datetime(DATA_END_DATE)
+            df = df[df[RAW_DATE_COL] < end_dt] # Belirtilen tarihe kadar (o gün dahil değil)
+            print(f"[DataManager] Filtre Uygulandı: {DATA_END_DATE} öncesi veriler alınıyor.")
+        # ---------------------------------
         
         # Tam datetime index oluşturma
         df['Datetime'] = df[RAW_DATE_COL].dt.normalize() + pd.to_timedelta(df[RAW_HOUR_COL], unit='h')
@@ -105,65 +120,56 @@ class DataManager:
         print("[DataManager] İl bazlı sıcaklık ortalamaları ve termal özellikler hesaplanıyor...")
 
         # A. İL BAZLI ORTALAMALAR (AGGREGATION)
-        # Tek tek istasyonlar yerine il genelini temsil eden ortalamaları alıyoruz.
+        # Excel'deki yeni kısaltmalarınıza göre map'i güncelledik
         province_map = {
             'MUGLA': 'Hissedilen_Sıcaklık_Mean_MUGLA',
-            'DNZ':   'Hissedilen_Sıcaklık_Mean_DNZ',
-            'AYD':   'Hissedilen_Sıcaklık_Mean_AYD'
+            'DENIZLI': 'Hissedilen_Sıcaklık_Mean_DNZ', # 'DNZ' yerine 'DENIZLI' yaptık
+            'AYDIN':   'Hissedilen_Sıcaklık_Mean_AYD'  # 'AYD' yerine 'AYDIN' yaptık
         }
 
         cols_to_remove = []
 
-        # Her il için döngü
         for province_code, new_col_name in province_map.items():
-            # O ilin kodunu ve 'Hissedilen_Sıcaklık' ismini içeren tüm sütunları bul
-            relevant_cols = [c for c in df.columns if province_code in c and 'Hissedilen_Sıcaklık' in c]
+            # ARAMA KRİTERİ: 'Hissedilen_Sıcaklık' yerine 'app_temp_actual' arıyoruz
+            relevant_cols = [c for c in df.columns if province_code in c and 'app_temp_actual' in c]
             
             if relevant_cols:
-                # Satır bazında (axis=1) ortalama alarak tek sütuna indir
                 df[new_col_name] = df[relevant_cols].mean(axis=1)
-                
-                # Orijinal kalabalık sütunları silinecekler listesine ekle
-                cols_to_remove.extend(relevant_cols)
+                # Orijinal sütunları silebiliriz (opsiyonel)
+                # cols_to_remove.extend(relevant_cols) 
                 print(f"   -> {new_col_name} oluşturuldu ({len(relevant_cols)} istasyon birleştirildi).")
 
-        # B. TEMİZLİK (Gürültü Azaltma)
-        # Orijinal 14 sütunu kaldırıp yerine 3 temiz sütun bırakıyoruz.
-        if cols_to_remove:
-            df.drop(columns=cols_to_remove, inplace=True)
-        
-        # C. TERMAL ÖZELLİKLER İÇİN "BAZ" SÜTUN SEÇİMİ
-        # Eskiden 'MenteseCenter' kullanıyorduk, artık 'Muğla Ortalaması'nı kullanacağız.
-        # Eğer Muğla yoksa Denizli'yi, o da yoksa Aydın'ı dener.
+        # ... (BASE_TEMP_COL seçimi aynı kalabilir) ...
         available_means = [
             'Hissedilen_Sıcaklık_Mean_MUGLA', 
             'Hissedilen_Sıcaklık_Mean_DNZ', 
             'Hissedilen_Sıcaklık_Mean_AYD'
         ]
         
-        # Listeden veri setinde var olan ilk sütunu seç
         BASE_TEMP_COL = next((col for col in available_means if col in df.columns), None)
         
+        # ÇÖKMEYİ ENGELLEYEN KRİTİK DEĞİŞİKLİK:
+        # HDD ve CDD hesaplamalarını da bu 'if' bloğunun içine almalıyız
         if BASE_TEMP_COL:
             print(f"   -> Termal özellikler için baz alınan sütun: {BASE_TEMP_COL}")
             
-            # 1. Sıcaklığın Karesi (U-Eğrisi)
-            # Konfor sıcaklığından (18) uzaklaştıkça değer büyür (Klima/Isıtma etkisi)
             df['Temp_Squared_18'] = (df[BASE_TEMP_COL] - 18) ** 2
             
-            # 2. Termal Atalet (Sıcaklık Lag'leri)
-            # Binaların ısınma/soğuma gecikmesi
             for lag in [3, 6, 12]:
                 df[f'Temp_Lag{lag}h'] = df[BASE_TEMP_COL].shift(lag)
             
-            # 3. [ÖNEMLİ] LAG TUZAĞINI KIRAN "DELTA" ÖZELLİKLERİ
-            # Modelin "Dün hava nasıldı?" yerine "Hava dünden ne kadar değişti?" sorusunu cevaplaması için.
             df['Temp_Diff_24h'] = df[BASE_TEMP_COL] - df[BASE_TEMP_COL].shift(24)
             df['Temp_Diff_3h'] = df[BASE_TEMP_COL].diff(3)
 
-            print("   -> Temp_Squared, Lags ve Temp_Diff (Delta) özellikleri eklendi.")
+            # Isıtma/Soğutma streslerini buraya taşıdık ki BASE_TEMP_COL None ise çökmesin
+            df['HDD_Heating_Stress'] = np.maximum(0, 16 - df[BASE_TEMP_COL])
+            df['CDD_Cooling_Stress'] = np.maximum(0, df[BASE_TEMP_COL] - 24)
+            df['Extreme_Heat_Impact'] = df['CDD_Cooling_Stress'] ** 2
+            df['Extreme_Cold_Impact'] = df['HDD_Heating_Stress'] ** 2
+
+            print("   -> Temp_Squared, HDD/CDD ve Delta özellikleri başarıyla eklendi.")
         else:
-            print("   -> UYARI: Hiçbir sıcaklık ortalaması oluşturulamadı! Termal özellikler atlanıyor.")
+            print("   -> HATA: Sıcaklık sütunları bulunamadı! Lütfen Excel başlıklarını kontrol edin.")
     
         
         # Referans sıcaklıklar (Türkiye standartlarına göre)
