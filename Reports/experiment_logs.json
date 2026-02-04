@@ -1334,5 +1334,266 @@
             "best_split_mape": 0.5024
         },
         "notes": "Ensemble Run"
+    },
+    {
+        "timestamp": "2026-01-05 17:24:49",
+        "model_name": "Grand_Ensemble",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 141
+        },
+        "results": {
+            "split_mape_scores": [
+                1.722,
+                1.716,
+                2.3108,
+                2.7794,
+                2.4381,
+                2.9549,
+                4.1497,
+                3.9686,
+                2.1935,
+                3.0436,
+                2.2585,
+                1.9449
+            ],
+            "average_mape": 2.6233,
+            "best_split_mape": 1.716
+        },
+        "notes": "Ensemble Run"
+    },
+    {
+        "timestamp": "2026-01-05 17:37:32",
+        "model_name": "Grand_Ensemble",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 100
+        },
+        "results": {
+            "split_mape_scores": [
+                1.6376,
+                1.6734,
+                2.0474,
+                2.3926,
+                2.5048,
+                2.6484,
+                4.1144,
+                3.5538,
+                2.1398,
+                2.8643,
+                2.274,
+                1.912
+            ],
+            "average_mape": 2.4802,
+            "best_split_mape": 1.6376
+        },
+        "notes": "Ensemble Run"
+    },
+    {
+        "timestamp": "2026-01-05 17:50:09",
+        "model_name": "Grand_Ensemble_Hybrid",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 100
+        },
+        "results": {
+            "split_mape_scores": [
+                1.6376,
+                1.6734,
+                2.0474,
+                2.3926,
+                2.5048,
+                2.6484,
+                4.1144,
+                3.5538,
+                2.1398,
+                2.8643,
+                2.274,
+                1.912
+            ],
+            "average_mape": 2.4802,
+            "best_split_mape": 1.6376
+        },
+        "notes": "Simple MAPE: 2.48 | Hybrid MAPE: 2.45"
+    },
+    {
+        "timestamp": "2026-01-05 20:03:40",
+        "model_name": "ANN_Solo_CV",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 100
+        },
+        "results": {
+            "split_mape_scores": [
+                4.2044,
+                2.5182,
+                3.2787,
+                3.6809,
+                3.755,
+                3.4073,
+                5.0914,
+                4.0087,
+                2.5323,
+                4.2186,
+                5.4179,
+                2.707
+            ],
+            "average_mape": 3.735,
+            "best_split_mape": 2.5182
+        },
+        "notes": "Neural Network with 5-Layer Pyramid"
+    },
+    {
+        "timestamp": "2026-01-06 14:00:53",
+        "model_name": "CatBoost_Solo",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 93
+        },
+        "results": {
+            "split_mape_scores": [
+                1.9462,
+                2.0614,
+                2.3829,
+                2.7473,
+                2.8054,
+                3.488,
+                3.9165,
+                3.3065,
+                2.5393,
+                3.2357,
+                2.4269,
+                2.0805
+            ],
+            "average_mape": 2.7447,
+            "best_split_mape": 1.9462
+        },
+        "notes": "Single Model Run"
+    },
+    {
+        "timestamp": "2026-01-06 14:08:17",
+        "model_name": "CatBoost_Solo",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 93
+        },
+        "results": {
+            "split_mape_scores": [
+                1.9462,
+                2.0614,
+                2.3829,
+                2.7473,
+                2.8054,
+                3.488,
+                3.9165,
+                3.3065,
+                2.5393,
+                3.2357,
+                2.4269,
+                2.0805
+            ],
+            "average_mape": 2.7447,
+            "best_split_mape": 1.9462
+        },
+        "notes": "Single Model Run"
+    },
+    {
+        "timestamp": "2026-01-06 14:14:12",
+        "model_name": "XGBoost_Solo",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 93
+        },
+        "results": {
+            "split_mape_scores": [
+                1.88,
+                1.8322,
+                2.1942,
+                2.4187,
+                2.8743,
+                2.8152,
+                4.235,
+                3.1746,
+                2.57,
+                3.0468,
+                2.5815,
+                1.9991
+            ],
+            "average_mape": 2.6351,
+            "best_split_mape": 1.8322
+        },
+        "notes": "Single Model Run"
+    },
+    {
+        "timestamp": "2026-01-06 14:20:33",
+        "model_name": "XGBoost_Solo",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 93
+        },
+        "results": {
+            "split_mape_scores": [
+                1.88,
+                1.8322,
+                2.1942,
+                2.4187,
+                2.8743,
+                2.8152,
+                4.235,
+                3.1746,
+                2.57,
+                3.0468,
+                2.5815,
+                1.9991
+            ],
+            "average_mape": 2.6351,
+            "best_split_mape": 1.8322
+        },
+        "notes": "Single Model Run"
+    },
+    {
+        "timestamp": "2026-01-06 14:24:10",
+        "model_name": "LightGBM_Solo",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 93
+        },
+        "results": {
+            "split_mape_scores": [
+                1.9542,
+                1.8881,
+                2.1838,
+                2.5026,
+                2.2768,
+                2.6874,
+                4.1817,
+                3.8278,
+                2.372,
+                3.1377,
+                2.4533,
+                1.9465
+            ],
+            "average_mape": 2.6177,
+            "best_split_mape": 1.8881
+        },
+        "notes": "Single Model Run"
     }
 ]

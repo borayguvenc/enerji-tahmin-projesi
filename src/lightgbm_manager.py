@@ -113,13 +113,27 @@ class LightGBMManager:
         
         return preds
 
-    def get_feature_importance(self):
+    def get_feature_importance(self, max_num=20):
+        """
+        LightGBM Gain skorlarını raporlar.
+        """
         if self.model is None:
+            print("Model eğitilmedi!")
             return None
         
-        # LightGBM Feature Importance çizimi
-        lgb.plot_importance(self.model, max_num_features=20, importance_type='gain', figsize=(10, 6), title='LightGBM Feature Importance (Gain)')
+        # DataFrame oluşturma
+        df_imp = pd.DataFrame({
+            'Feature': self.model.feature_name_,
+            'Importance': self.model.feature_importances_ # Init'te 'gain' seçildiği için doğrudan gelir
+        }).sort_values(by='Importance', ascending=False).reset_index(drop=True)
+        
+        # Görselleştirme
+        plt.figure(figsize=(10, 8))
+        lgb.plot_importance(self.model, max_num_features=max_num, importance_type='gain', 
+                           title='LightGBM Feature Importance (Gain)')
         plt.show()
+        
+        return df_imp
 
 
     def save_model(self, filename='model_lgbm.txt'):

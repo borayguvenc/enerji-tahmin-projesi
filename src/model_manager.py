@@ -132,27 +132,24 @@ class ModelManager:
         else:
             print(f"Model file not found at: {load_path}")
 
-    def get_feature_importance(self):
+    def get_feature_importance(self, max_num=20):
         """
-        Modelin hangi özelliğe ne kadar önem verdiğini gösterir.
-        Hem grafik çizer hem de DataFrame olarak döndürür.
+        XGBoost Gain skorlarını kullanarak önem derecelerini raporlar.
         """
         if self.model is None:
             print("Model henüz eğitilmedi!")
             return None
         
-        # Özelliklerin önem skorlarını al (Gain: Bilgi Kazancı)
-        # importance_type='gain' -> Hata düşürme gücüne bakar 
-        # importance_type='weight' -> Kaç kez kullanıldığına bakar
+        # 'gain' parametresi hatayı ne kadar azalttığını gösterir (En kritiği budur)
         importance = self.model.get_booster().get_score(importance_type='gain')
         
-        # Sözlükten DataFrame'e çevir ve sırala
-        df_imp = pd.DataFrame(list(importance.items()), columns=['Feature', 'Gain'])
-        df_imp = df_imp.sort_values(by='Gain', ascending=False)
+        df_imp = pd.DataFrame(list(importance.items()), columns=['Feature', 'Importance'])
+        df_imp = df_imp.sort_values(by='Importance', ascending=False).reset_index(drop=True)
         
-        plt.figure(figsize=(10, 6))
-        # En önemli 20 özelliği çiz
-        xgb.plot_importance(self.model, importance_type='gain', max_num_features=20, height=0.5, title='Feature Importance (Gain)')
+        # Görselleştirme
+        plt.figure(figsize=(10, 8))
+        xgb.plot_importance(self.model, importance_type='gain', max_num_features=max_num, 
+                           height=0.5, title='XGBoost Feature Importance (Gain)')
         plt.show()
         
         return df_imp

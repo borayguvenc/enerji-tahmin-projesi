@@ -18,6 +18,7 @@ sys.path.append(src_path)
 from config import (NUM_OF_SPLITS, TEST_SIZE, RAW_TARGET_COL, REPORT_FILENAME)
 from src.data_manager import DataManager
 from src.evaluator import Evaluator
+from src.stacking_manager import StackingManager
 
 from src.experiment_logger import ExperimentLogger  # <--- LOGGER
 from src.reporter import save_detailed_results      # <--- EXCEL RAPOR
@@ -27,6 +28,7 @@ from src.model_manager import ModelManager       # XGBoost
 from src.lightgbm_manager import LightGBMManager # LightGBM
 from src.catboost_manager import CatBoostManager # CatBoost
 from src.catboost_manager_tuned import CatBoostManagerTuned # CatBoost weighted
+from src.ann_manager import ANNManager
 
 def main():
     print("🚀 SİSTEM BAŞLATILIYOR...\n")
@@ -109,9 +111,12 @@ def main():
             notes="Single Model Run"
         )
 
+
+
         print("\n--- 💾 XGBoost Final Training & Saving ---")
         mm = ModelManager()
         mm.train_model(X_train, y_train, X_test, y_test)
+        mm.get_feature_importance(max_num=20)
         mm.evaluate(X_test, y_test)
         mm.save_model("final_xgboost.json") 
 
@@ -132,6 +137,7 @@ def main():
         print("\n--- 💾 LightGBM Final Training & Saving ---")
         lgbm = LightGBMManager()
         lgbm.train_model(X_train, y_train, X_test, y_test)
+        lgbm.get_feature_importance(max_num=20)
         lgbm.evaluate(X_test, y_test)
         lgbm.save_model("final_lightgbm.txt")
 
@@ -152,6 +158,7 @@ def main():
         print("\n--- 💾 CatBoost Final Training & Saving ---")
         cat = CatBoostManager()
         cat.train_model(X_train, y_train, X_test, y_test)
+        cat.get_feature_importance(max_num=20)
         cat.evaluate(X_test, y_test)
         cat.save_model("final_catboost.cbm")
 
@@ -183,22 +190,44 @@ def main():
         # 1. CV Analizi
         scores, full_year_results = evaluator.run_cross_validation(X_full, y_full, model_type='ALL')
         evaluator.print_summary(scores)
+        simple_ensemble_mape = np.mean(scores)
 
-        # 2. LOGLAMA
+        # ---------------------------------------------------------
+        # 2. YENİ: REGRESYON (STACKING) KATMANI
+        # ---------------------------------------------------------
+        
+        sm = StackingManager(project_root=current_dir)
+        
+        # Meta-modeli (Regresyon) eğit
+        sm.train_meta_model(full_year_results)
+        
+        # Hibrit tahminleri üret
+        hybrid_predictions = sm.predict_hybrid(full_year_results)
+        
+        # Hibrit MAPE hesapla (Kıyaslama için)
+        from src.evaluator import calculate_mape
+        hybrid_mape = calculate_mape(full_year_results['Actual'], hybrid_predictions)
+        
+        print(f"\n📊 PERFORMANS KIYASLAMASI:")
+        print(f"   -> Basit Ortalama MAPE: %{simple_ensemble_mape:.2f}")
+        print(f"   -> Regresyonlu Hibrit MAPE: %{hybrid_mape:.2f}")
+        # ---------------------------------------------------------
+
+        # 3. LOGLAMA (Artık Notlar kısmına hibrit sonucu da ekliyoruz)
         print("\n[Logger] Sonuçlar veritabanına işleniyor...")
         logger.log_experiment(
-            model_name="Grand_Ensemble",
-            mape_scores=scores,
+            model_name="Grand_Ensemble_Hybrid",
+            mape_scores=scores, # Eski skorları koru
             config_dict=config_pack,
-            notes="Ensemble Run"
+            notes=f"Simple MAPE: {simple_ensemble_mape:.2f} | Hybrid MAPE: {hybrid_mape:.2f}"
         )
-
         
-        # 3. Yıllık Rapor (Excel)
+        # 4. Yıllık Rapor (Excel) - Hibrit sonucu en başa ekliyoruz
         print("\n[Rapor] Yıllık Detaylı Excel Hazırlanıyor...")
         
         predictions_pack = {
-            'Grand_Ensemble': full_year_results['Ensemble_Pred'],
+            'Hybrid_Stacking': hybrid_predictions,       # <-- YENİ (Regresyonlu)
+            'Grand_Ensemble': full_year_results['Ensemble_Pred'], # Mevcut (Basit Ortalama)
             'XGBoost_Detail': full_year_results['XGB_Pred'],
             'LightGBM_Detail': full_year_results['LGBM_Pred'],
             'CatBoost_Detail': full_year_results['CAT_Pred']
@@ -212,6 +241,7 @@ def main():
             project_root=current_dir,
             filename=REPORT_FILENAME
         )
+        sm.save_model() # Meta modeli de kaydet
         
     elif mode == 'SNIPER':
         # --- MOD 5: SNIPER (BAYRAM) MODELİ ---
@@ -229,6 +259,27 @@ def main():
             notes="Weighted Training for Holidays"
         )
 
+    elif mode == 'ANN':
+        print("\n--- 🧠 Yapay Sinir Ağı (ANN) Cross Validation ---")
+        
+        scores, full_year_results = evaluator.run_cross_validation(X_full, y_full, model_type='ANN')
+        
+        # 2. Özet Rapor
+        evaluator.print_summary(scores)
+        
+        # 3. Loglama
+        logger.log_experiment(
+            model_name="ANN_Solo_CV",
+            mape_scores=scores,
+            config_dict=config_pack,
+            notes="Neural Network with 5-Layer Pyramid"
+        )
+
+        # 4. Final Eğitim ve Kayıt (Üretim için)
+        print("\n--- 💾 ANN Final Training & Saving ---")
+        ann_final = ANNManager(epochs=100) # Finalde daha uzun eğitebiliriz
+        ann_final.train_model(X_train, y_train, X_test, y_test)
+        ann_final.save_model("final_ann_model.pth")
       
 if __name__ == "__main__":
     main()

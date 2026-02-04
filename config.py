@@ -16,11 +16,40 @@ DATA_START_DATE = None         # Örn: '2024-01-01' (string veya None)
 DATA_END_DATE   = None # Örn: '2025-04-01' 
 
 
-REPORT_FILENAME = "YILLIK_DENEME_FORECAST.xlsx"
+REPORT_FILENAME = "YILLIK_DENEME_Regressyon.xlsx"
 
 # --- DROP LIST ---
 # Normal mod için çıkarılacak sütunlar listesi. 
-COLS_TO_DROP = [ "Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", "Ay_Sin", "Ay_Cos", "Saat_Sin", "Saat_Cos", "Rolling_Mean_3h", "Rolling_Mean_168h","ÖzelGün_Adı"]
+COLS_TO_DROP = ["After_Bayram" "Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", "Ay_Sin", "Ay_Cos", "Saat_Sin", "Saat_Cos", "Rolling_Mean_3h", "Rolling_Mean_168h","ÖzelGün_Adı",
+                "AYDIN_BozdoganMadran_app_temp_fc", "AYDIN_BuyukMenderes_app_temp_fc",
+                "AYDIN_Merkez_app_temp_fc", "AYDIN_OSB_app_temp_fc",
+                "DENIZLI_Honaz_app_temp_fc", "DENIZLI_IsikliCivril_app_temp_fc",
+                "DENIZLI_Merkez_app_temp_fc", "DENIZLI_OSB_app_temp_fc",
+                "MUGLA_BodrumCenter_app_temp_fc", "MUGLA_DalamanPlain_app_temp_fc",
+                "MUGLA_MenteseCenter_app_temp_fc", "MUGLA_MilasIndustrial_app_temp_fc",
+                "MUGLA_SandrasHighAlt_app_temp_fc", "MUGLA_YataganIndustrial_app_temp_fc",
+
+                # --- Cloud Cover Forecasts ---
+                "AYDIN_BozdoganMadran_cloud_fc", "AYDIN_BuyukMenderes_cloud_fc",
+                "AYDIN_Merkez_cloud_fc", "AYDIN_OSB_cloud_fc",
+                "DENIZLI_Honaz_cloud_fc", "DENIZLI_IsikliCivril_cloud_fc",
+                "DENIZLI_Merkez_cloud_fc", "DENIZLI_OSB_cloud_fc",
+                "MUGLA_BodrumCenter_cloud_fc", "MUGLA_DalamanPlain_cloud_fc",
+                "MUGLA_MenteseCenter_cloud_fc", "MUGLA_MilasIndustrial_cloud_fc",
+                "MUGLA_SandrasHighAlt_cloud_fc", "MUGLA_YataganIndustrial_cloud_fc",
+
+                # --- Precipitation Forecasts ---
+                "AYDIN_BozdoganMadran_precip_fc", "AYDIN_BuyukMenderes_precip_fc",
+                "AYDIN_Merkez_precip_fc", "AYDIN_OSB_precip_fc",
+                "DENIZLI_Honaz_precip_fc", "DENIZLI_IsikliCivril_precip_fc",
+                "DENIZLI_Merkez_precip_fc", "DENIZLI_OSB_precip_fc",
+                "MUGLA_BodrumCenter_precip_fc", "MUGLA_DalamanPlain_precip_fc",
+                "MUGLA_MenteseCenter_precip_fc", "MUGLA_MilasIndustrial_precip_fc",
+                "MUGLA_SandrasHighAlt_precip_fc", "MUGLA_YataganIndustrial_precip_fc",
+                "ADM_Dağıtılan_Enerji_(MWh)_Lag24h",
+                "ADM_Dağıtılan_Enerji_(MWh)_Lag25h",
+                "ADM_Dağıtılan_Enerji_(MWh)_Lag26h",
+                "ADM_Dağıtılan_Enerji_(MWh)_Lag27h",	"ADM_Dağıtılan_Enerji_(MWh)_Lag168h",	"ADM_Dağıtılan_Enerji_(MWh)_Lag336h",	"ADM_Dağıtılan_Enerji_(MWh)_Lag504h"]
 
 
 """
@@ -85,9 +114,9 @@ COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", 
     """
 
 # --- MODEL PARAMETERS ---
-TEST_SIZE = 24 # Last 120 days for testing
+TEST_SIZE = 24*30 # Last 120 days for testing
 WARMUP_PERIOD = 504  # To handle NaN values caused by the largest lag (Lag504)
-NUM_OF_SPLITS = 365   # Number of folds for Time Series Cross Validation
+NUM_OF_SPLITS = 12  # Number of folds for Time Series Cross Validation
 
 
 

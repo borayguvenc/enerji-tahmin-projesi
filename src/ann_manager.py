@@ -39,13 +39,16 @@ class TabularModel(nn.Module):
 
 # ---------------------------------------------------------
 class ANNManager:
-    def __init__(self, epochs=100, batch_size=64, learning_rate=0.001):
+    def __init__(self, epochs=100, batch_size=64, learning_rate=0.001, 
+                 hidden_layers=[256, 128, 64], dropout_rate=0.3):
         self.epochs = epochs
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.hidden_layers = hidden_layers # <--- Yeni
+        self.dropout_rate = dropout_rate   # <--- Yeni
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = None
-        self.scaler = StandardScaler() # ANN için özellik ölçekleme ŞARTTIR!
+        self.scaler = StandardScaler()
         print(f"[ANNManager] Cihaz: {self.device}")
 
     def train_model(self, X_train, y_train, X_test, y_test, sample_weight=None):
@@ -70,14 +73,18 @@ class ANNManager:
 
         # 3. Model Başlatma
         input_dim = X_train.shape[1]
-        self.model = TabularModel(input_dim).to(self.device)
+        self.model = TabularModel(
+            input_dim, 
+            hidden_layers=self.hidden_layers, 
+            dropout_rate=self.dropout_rate
+        ).to(self.device)
         
         # Optimizer & Loss
         criterion = nn.L1Loss(reduction='none') # MAE Loss (Reduction none yapıyoruz ki ağırlık çarpabilelim)
         optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         
         # Learning Rate Scheduler (Plato çizerse LR düşür)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
         
         # 4. Eğitim Döngüsü (Training Loop)
         train_dataset = TensorDataset(X_train_t, y_train_t)

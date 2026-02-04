@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from catboost import CatBoostRegressor, Pool
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
@@ -56,7 +57,7 @@ class CatBoostManager:
             verbose=100,
             early_stopping_rounds=50,
             allow_writing_files=False,
-            cat_features=cat_features_names # <--- İŞTE KRİTİK EKLEME BURASI
+            cat_features=cat_features_names
         )
 
         print(f"[CatBoostManager] Training started on {len(X_train)} samples...")
@@ -124,29 +125,32 @@ class CatBoostManager:
         
         return preds
 
-    def get_feature_importance(self):
+    def get_feature_importance(self, max_num=20):
         """
-        Modelin hangi özelliğe ne kadar önem verdiğini grafik olarak çizer.
+        CatBoost dahili get_feature_importance metodunu kullanır.
         """
         if self.model is None:
-            print("Model is not trained yet!")
-            return
+            print("Model eğitilmedi!")
+            return None
         
-        feature_importance = self.model.get_feature_importance()
+        # 'FeatureImportance' varsayılan olarak PredictionValuesChange döner
+        # Elektrik yükünde hatayı nasıl etkilediğini görmek için 'LossFunctionChange' de denenebilir.
+        imp_values = self.model.get_feature_importance()
         feature_names = self.model.feature_names_
         
-        # Önem sırasına göre diz (Küçükten büyüğe)
-        sorted_idx = np.argsort(feature_importance)
+        df_imp = pd.DataFrame({'Feature': feature_names, 'Importance': imp_values})
+        df_imp = df_imp.sort_values(by='Importance', ascending=False).reset_index(drop=True)
         
-        # En önemli son 20 özelliği göster
-        top_n = 20
+        # Görselleştirme
         plt.figure(figsize=(10, 8))
-        plt.barh(range(len(sorted_idx[-top_n:])), feature_importance[sorted_idx][-top_n:], align='center')
-        plt.yticks(range(len(sorted_idx[-top_n:])), [feature_names[i] for i in sorted_idx][-top_n:])
-        plt.xlabel('Feature Importance')
+        top_df = df_imp.head(max_num).sort_values(by='Importance', ascending=True)
+        plt.barh(top_df['Feature'], top_df['Importance'], color='skyblue')
+        plt.xlabel('Importance Score')
         plt.title('CatBoost Feature Importance')
         plt.tight_layout()
         plt.show()
+        
+        return df_imp
 
     def save_model(self, filename='best_catboost_model.cbm'):
         """

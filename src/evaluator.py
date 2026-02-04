@@ -9,6 +9,7 @@ from src.model_manager import ModelManager       # XGBoost
 from src.lightgbm_manager import LightGBMManager # LightGBM
 from src.catboost_manager import CatBoostManager # CatBoost
 from src.catboost_manager_tuned import CatBoostManagerTuned # CatBoost Tuned
+from src.ann_manager import ANNManager
 
 def calculate_mape(y_true, y_pred):
     epsilon = 1e-10
@@ -22,7 +23,7 @@ class Evaluator:
         self.test_size = test_size
         self.tscv = TimeSeriesSplit(n_splits=n_splits, test_size=test_size)
 
-    def run_cross_validation(self, X, y, model_type='CAT', mode='fc'):
+    def run_cross_validation(self, X, y, model_type='CAT', mode='actual'):
         """
         Hem skorları hem de birleştirilmiş tüm tahminleri döndürür.
         mode: 'fc' (Forecast takaslı) veya 'actual' (Sadece gerçek verilerle)
@@ -102,9 +103,13 @@ class Evaluator:
                 elif model_type == 'LGBM': man = LightGBMManager()
                 elif model_type == 'CAT': man = CatBoostManager()
                 elif model_type == 'CAT_TUNED': man = CatBoostManagerTuned()
+                elif model_type == 'ANN': man = ANNManager()
                 
                 man.train_model(X_train, y_train, X_test, y_test)
-                preds = man.model.predict(X_test)
+                if model_type == 'ANN':
+                    preds = man.predict(X_test)
+                else:
+                    preds = man.model.predict(X_test)
                 storage['Ensemble_Pred'].extend(preds)
                 final_preds_for_score = preds
 
