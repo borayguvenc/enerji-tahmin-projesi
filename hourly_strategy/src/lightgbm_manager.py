@@ -1,0 +1,167 @@
+import lightgbm as lgb
+import os
+import sys
+import numpy as np
+import pandas as pd
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import matplotlib.pyplot as plt
+
+# --- CONFIG YOLU AYARI ---
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.append(project_root)
+
+from config import MODEL_NAME
+
+def calculate_mape(y_true, y_pred):
+    epsilon = 1e-10
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    mape = np.mean(np.abs((y_true - y_pred) / (y_true + epsilon))) * 100
+    return mape
+
+class LightGBMManager:
+    def __init__(self):
+        self.model = None
+        self.model_dir = os.path.join(project_root, 'Model')
+        os.makedirs(self.model_dir, exist_ok=True)
+
+    def train_model(self, X_train, y_train, X_test, y_test, params=None):
+        print("[LightGBMManager] Initializing LightGBM Regressor...")
+        
+        # LightGBM özel veri formatını sever ama pandas ile de çalışır.
+        # Kategorik değişkenleri otomatik tanır ama biz int'e çevirdiğimiz için sorun yok.
+        
+        # Default Parameters
+        model_params = {
+            'n_estimators': 2000,
+            'objective': 'regression',
+            'n_jobs': -1,
+            'random_state': 42,
+            'importance_type': 'gain',
+            'learning_rate': 0.05074154948325871,
+            'num_leaves': 30,
+            'max_depth': 6,
+            'min_child_samples': 28,
+            'subsample': 0.813694299293671,
+            'colsample_bytree': 0.6293259247827979,
+            'reg_alpha': 7.73076167663075,
+            'reg_lambda': 2.116570077959441
+        }
+
+        # Override with optimized params if provided
+        if params:
+            print(f"[LightGBMManager] Using optimized parameters: {params}")
+            model_params.update(params)
+        
+        self.model = lgb.LGBMRegressor(**model_params)
+
+        print(f"[LightGBMManager] Training started on {len(X_train)} samples...")
+
+        """
+        # --- ADIM 2: CEZALARI ARTIR (Katsayılar) ---
+        weights = np.ones(len(X_train))
+        # A. Ramazan Günleri (Örn: 3 Kat Önemli)
+        if 'Is_Ramadan' in X_train.columns:
+            # Sütunu bul ve maske oluştur
+            mask = (X_train['Is_Ramadan'] == 1).values
+            weights[mask] *= 3.0
+            
+        # B. Sahur Saatleri (Örn: 5 Kat Önemli - Gece hatalarını düzeltmek için)
+        if 'Is_Sahur' in X_train.columns:
+            mask = (X_train['Is_Sahur'] == 1).values
+            weights[mask] *= 5.0
+            
+        # C. Milli/Dini Bayramlar (Örn: 10 Kat Önemli - Mart sonundaki çukuru düzeltmek için)
+        if 'Milli_Bayram' in X_train.columns: # Sütun adın 'Is_Holiday' ise onu yaz
+            mask = (X_train['Milli_Bayram'] == 1).values
+            weights[mask] *= 10.0
+            
+        if 'Kurban_Bayram' in X_train.columns:
+            mask = (X_train['Kurban_Bayram'] == 1).values
+            weights[mask] *= 10.0
+
+        # D. Mart Soğukları (Eğer data_manager'da eklediysen)
+        if 'March_Heating_Degree' in X_train.columns:
+            # Soğuk varsa (Değer 0'dan büyükse) ağırlığı artır
+            mask = (X_train['March_Heating_Degree'] > 0).values
+            weights[mask] *= 2.0
+        """
+
+        # LightGBM eğitim formatı
+        self.model.fit(
+            X_train, y_train,
+            eval_set=[(X_test, y_test)],
+            eval_metric='mae',
+            #sample_weight=weights,
+            callbacks=[
+                lgb.early_stopping(stopping_rounds=50),
+                lgb.log_evaluation(period=100)
+            ]
+        )
+        print("[LightGBMManager] Training finished.")
+
+    def evaluate(self, X_test, y_test):
+        if self.model is None:
+            print("Model is not trained yet!")
+            return
+
+        preds = self.model.predict(X_test)
+        
+        mae = mean_absolute_error(y_test, preds)
+        rmse = np.sqrt(mean_squared_error(y_test, preds))
+        mape = calculate_mape(y_test, preds)
+        
+        print("\n--- LightGBM Performance ---")
+        print(f"MAE  : {mae:.2f}")
+        print(f"RMSE : {rmse:.2f}")
+        print(f"MAPE : %{mape:.2f}") 
+        print("----------------------------\n")
+        
+        return preds
+
+    def get_feature_importance(self, max_num=20):
+        """
+        LightGBM Gain skorlarını raporlar.
+        """
+        if self.model is None:
+            print("Model eğitilmedi!")
+            return None
+        
+        # DataFrame oluşturma
+        df_imp = pd.DataFrame({
+            'Feature': self.model.feature_name_,
+            'Importance': self.model.feature_importances_ # Init'te 'gain' seçildiği için doğrudan gelir
+        }).sort_values(by='Importance', ascending=False).reset_index(drop=True)
+        
+        # Görselleştirme
+        plt.figure(figsize=(10, 8))
+        lgb.plot_importance(self.model, max_num_features=max_num, importance_type='gain', 
+                           title='LightGBM Feature Importance (Gain)')
+        plt.show()
+        
+        return df_imp
+
+
+    def save_model(self, filename='model_lgbm.txt'):
+        """
+        LightGBM modelini güvenli bir şekilde (Türkçe karakter sorunu olmadan) kaydeder.
+        """
+        if self.model is None:
+            print("Model eğitilmedi, kayıt yapılamıyor.")
+            return
+
+        save_path = os.path.join(self.model_dir, filename)
+        
+        try:
+            # YÖNTEM 1 (GÜVENLİ): Modeli string olarak al, Python ile biz kaydedelim.
+            # Bu sayede "Masaüstü" gibi Türkçe yollarda hata vermez.
+            model_str = self.model.booster_.model_to_string()
+            
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(model_str)
+                
+            print(f"[LightGBMManager] Model başarıyla kaydedildi: {save_path}")
+            
+        except Exception as e:
+            # Eğer yukarıdaki çalışmazsa eski yöntemi dener ama hata basar
+            print(f"[LightGBMManager] Kayıt sırasında hata oluştu: {e}")
