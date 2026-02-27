@@ -1595,5 +1595,107 @@
             "best_split_mape": 1.8881
         },
         "notes": "Single Model Run"
+    },
+    {
+        "timestamp": "2026-02-26 17:56:03",
+        "model_name": "Grand_Ensemble_Hybrid",
+        "config": {
+            "NUM_OF_SPLITS": 5,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 93
+        },
+        "results": {
+            "split_mape_scores": [
+                3.3402,
+                2.4582,
+                3.0863,
+                2.2941,
+                1.8896
+            ],
+            "average_mape": 2.6137,
+            "best_split_mape": 1.8896
+        },
+        "notes": "Simple MAPE: 2.61 | Hybrid MAPE: 2.57"
+    },
+    {
+        "timestamp": "2026-02-26 18:07:59",
+        "model_name": "Grand_Ensemble_Hybrid",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 93
+        },
+        "results": {
+            "split_mape_scores": [
+                1.8849,
+                1.8282,
+                2.1795,
+                2.504,
+                2.4118,
+                2.8851,
+                4.0172,
+                3.3402,
+                2.4582,
+                3.0863,
+                2.2941,
+                1.8896
+            ],
+            "average_mape": 2.5649,
+            "best_split_mape": 1.8282
+        },
+        "notes": "Simple MAPE: 2.56 | Hybrid MAPE: 2.53"
+    },
+    {
+        "timestamp": "2026-02-26 18:24:06",
+        "model_name": "Grand_Ensemble_Hybrid",
+        "config": {
+            "NUM_OF_SPLITS": 12,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 100
+        },
+        "results": {
+            "split_mape_scores": [
+                1.6284,
+                1.6351,
+                2.0172,
+                2.3811,
+                2.4771,
+                2.5974,
+                4.0934,
+                3.6303,
+                2.1429,
+                2.833,
+                2.3201,
+                1.8693
+            ],
+            "average_mape": 2.4688,
+            "best_split_mape": 1.6284
+        },
+        "notes": "Simple MAPE: 2.47 | Hybrid MAPE: 2.44"
+    },
+    {
+        "timestamp": "2026-02-26 19:01:34",
+        "model_name": "Grand_Ensemble_Hybrid",
+        "config": {
+            "NUM_OF_SPLITS": 5,
+            "TEST_SIZE": 720,
+            "RAW_TARGET_COL": "ADM_Dağıtılan_Enerji_(MWh)",
+            "FEATURE_COUNT": 100
+        },
+        "results": {
+            "split_mape_scores": [
+                3.6303,
+                2.1429,
+                2.833,
+                2.3201,
+                1.8693
+            ],
+            "average_mape": 2.5591,
+            "best_split_mape": 1.8693
+        },
+        "notes": "Simple MAPE: 2.56 | Hybrid MAPE: 2.51"
     }
 ]

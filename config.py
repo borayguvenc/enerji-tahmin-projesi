@@ -46,10 +46,7 @@ COLS_TO_DROP = ["After_Bayram" "Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Si
                 "MUGLA_BodrumCenter_precip_fc", "MUGLA_DalamanPlain_precip_fc",
                 "MUGLA_MenteseCenter_precip_fc", "MUGLA_MilasIndustrial_precip_fc",
                 "MUGLA_SandrasHighAlt_precip_fc", "MUGLA_YataganIndustrial_precip_fc",
-                "ADM_Dağıtılan_Enerji_(MWh)_Lag24h",
-                "ADM_Dağıtılan_Enerji_(MWh)_Lag25h",
-                "ADM_Dağıtılan_Enerji_(MWh)_Lag26h",
-                "ADM_Dağıtılan_Enerji_(MWh)_Lag27h",	"ADM_Dağıtılan_Enerji_(MWh)_Lag168h",	"ADM_Dağıtılan_Enerji_(MWh)_Lag336h",	"ADM_Dağıtılan_Enerji_(MWh)_Lag504h"]
+                ]
 
 
 """
@@ -116,7 +113,7 @@ COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", 
 # --- MODEL PARAMETERS ---
 TEST_SIZE = 24*30 # Last 120 days for testing
 WARMUP_PERIOD = 504  # To handle NaN values caused by the largest lag (Lag504)
-NUM_OF_SPLITS = 12  # Number of folds for Time Series Cross Validation
+NUM_OF_SPLITS =5 # Number of folds for Time Series Cross Validation
 
 
 

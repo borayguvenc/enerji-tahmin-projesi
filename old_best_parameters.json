@@ -1,0 +1,53 @@
+        self.model = CatBoostRegressor(
+            iterations=1500,
+            learning_rate=0.05,
+            depth=6,
+            loss_function='MAE',
+            eval_metric='MAPE',
+            random_seed=42,
+            verbose=100,
+            early_stopping_rounds=50,
+            allow_writing_files=False,
+            cat_features=cat_features_names
+        )
+
+
+        self.model = xgb.XGBRegressor(
+            n_estimators=1000,
+            
+            # --- OPTIMIZED PARAMS ---
+            learning_rate=0.09153183759856734,
+            max_depth=5,
+            subsample=0.9232356233862338,
+            colsample_bytree=0.6011313023146714,
+            min_child_weight=5,              # Eklendi
+            reg_alpha=3.866820280149056,    # Eklendi (L1 Regularization)
+            reg_lambda=2.333871331570596,  # Eklendi (L2 Regularization)
+            # ------------------------
+            
+            objective='reg:squarederror', 
+            eval_metric='mae',  
+            enable_categorical=True, 
+            early_stopping_rounds=50,
+            n_jobs=-1
+        )
+
+       
+        self.model = lgb.LGBMRegressor(
+            # 1. Sabit Ayarlar
+            n_estimators=2000,       # Kapasiteyi yüksek tutuyoruz, early_stopping nerede duracağını bilir.
+            objective='regression',
+            n_jobs=-1,
+            random_state=42,
+            importance_type='gain',
+            verbosity=-1,
+            
+            learning_rate=0.05074154948325871,
+            num_leaves=30,           # Ağaç karmaşıklığı
+            max_depth=6,             # Derinlik limiti (Overfitting freni)
+            min_child_samples=28,    # Bir yaprakta en az 28 veri olsun
+            subsample=0.813694299293671,         # Satırların %81'ini kullan
+            colsample_bytree=0.6293259247827979, # Sütunların %63'ünü kullan (Çeşitlilik için süper)
+            reg_alpha=7.73076167663075,          # L1 Regularization (Gürültü temizliği)
+            reg_lambda=2.116570077959441         # L2 Regularization
+        )

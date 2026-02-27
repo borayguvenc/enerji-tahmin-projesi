@@ -153,17 +153,16 @@ def objective_cat(trial):
     param = {
         'loss_function': 'MAE',
         'eval_metric': 'MAPE',
-        'iterations': 3000,
+        'iterations': 1500,  # Optimizasyon hızını artırmak için 3000'den 1500'e çekildi
         'verbose': False,
-        'early_stopping_rounds': 100,
+        'early_stopping_rounds': 50,
         'allow_writing_files': False,
-        'cat_features': cat_features_names,
         
         # Optimize Edilecekler
-        'learning_rate': trial.suggest_float('learning_rate', 0.005, 0.15),
+        'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.15),
         'depth': trial.suggest_int('depth', 4, 10),
         'l2_leaf_reg': trial.suggest_int('l2_leaf_reg', 1, 15),
-        'random_strength': trial.suggest_float('random_strength', 1e-9, 10),
+        'random_strength': trial.suggest_float('random_strength', 1e-9, 10.0),
         'bagging_temperature': trial.suggest_float('bagging_temperature', 0.0, 1.0),
         'min_data_in_leaf': trial.suggest_int('min_data_in_leaf', 1, 50)
     }
@@ -172,12 +171,19 @@ def objective_cat(trial):
     splits = get_train_test_data()
 
     for X_train, y_train, X_test, y_test in splits:
-        # CatBoost Pool (Hız için)
-        train_pool = Pool(X_train, y_train, cat_features=cat_features_names)
-        test_pool = Pool(X_test, y_test, cat_features=cat_features_names)
+        # CatBoost için güvenli veri yapısı (Kategorik değişkenleri burada belirtiyoruz)
+        train_pool = Pool(data=X_train, label=y_train, cat_features=cat_features_names)
+        test_pool = Pool(data=X_test, label=y_test, cat_features=cat_features_names)
         
         model = CatBoostRegressor(**param)
-        model.fit(train_pool, eval_set=test_pool)
+        
+        # Eğitim (Model parametrelerindeki cat_features yerine doğrudan Pool kullanıyoruz)
+        model.fit(
+            train_pool, 
+            eval_set=test_pool,
+            use_best_model=True  # Erken durdurmada en iyi modeli seç
+        )
+        
         preds = model.predict(test_pool)
         scores.append(calculate_mape(y_test, preds))
 

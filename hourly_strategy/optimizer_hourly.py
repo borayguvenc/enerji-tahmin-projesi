@@ -21,7 +21,7 @@ from src.data_manager import DataManager
 from config import RAW_TARGET_COL 
 
 # --- GLOBAL SETTINGS ---
-N_TRIALS = 20 # Number of trials per model per hour (Adjustable)
+N_TRIALS = 30 # Number of trials per model per hour (Adjustable)
 HOURS = range(24)
 OUTPUT_FILE = "hourly_params.json"
 
