@@ -36,13 +36,13 @@ class ModelManager:
             n_estimators=1000,
             
             # --- OPTIMIZED PARAMS ---
-            learning_rate=0.09153183759856734,
-            max_depth=5,
-            subsample=0.9232356233862338,
-            colsample_bytree=0.6011313023146714,
-            min_child_weight=5,              # Eklendi
-            reg_alpha=3.866820280149056,    # Eklendi (L1 Regularization)
-            reg_lambda=2.333871331570596,  # Eklendi (L2 Regularization)
+            learning_rate=0.09931882542569642,
+            max_depth=4,
+            subsample=0.7828662239525903,
+            colsample_bytree=0.574383187490635,
+            min_child_weight=13,              # Eklendi
+            reg_alpha=8.924757905144489,    # Eklendi (L1 Regularization)
+            reg_lambda=2.005839273119691,  # Eklendi (L2 Regularization)
             # ------------------------
             
             objective='reg:squarederror', 

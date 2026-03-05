@@ -2,7 +2,7 @@ import os
 
 # --- FILE PATHS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE_PATH = os.path.join(BASE_DIR, 'Input', 'INPUT_AYDEM.xlsx') 
+INPUT_FILE_PATH = os.path.join(BASE_DIR, 'Input', 'INPUT_AYDEM_UPDATED.xlsx') 
 
 # --- MODEL NAME ---
 MODEL_NAME = 'xgboost_model.json'    
@@ -16,11 +16,11 @@ DATA_START_DATE = None         # Örn: '2024-01-01' (string veya None)
 DATA_END_DATE   = None # Örn: '2025-04-01' 
 
 
-REPORT_FILENAME = "YILLIK_DENEME_Regressyon.xlsx"
+REPORT_FILENAME = "FINAL_ENSEMBLE.xlsx"
 
 # --- DROP LIST ---
 # Normal mod için çıkarılacak sütunlar listesi. 
-COLS_TO_DROP = ["After_Bayram" "Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", "Ay_Sin", "Ay_Cos", "Saat_Sin", "Saat_Cos", "Rolling_Mean_3h", "Rolling_Mean_168h","ÖzelGün_Adı",
+COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", "Ay_Sin", "Ay_Cos", "Saat_Sin", "Saat_Cos", "Rolling_Mean_3h", "Rolling_Mean_168h","ÖzelGün_Adı",
                 "AYDIN_BozdoganMadran_app_temp_fc", "AYDIN_BuyukMenderes_app_temp_fc",
                 "AYDIN_Merkez_app_temp_fc", "AYDIN_OSB_app_temp_fc",
                 "DENIZLI_Honaz_app_temp_fc", "DENIZLI_IsikliCivril_app_temp_fc",
@@ -111,9 +111,9 @@ COLS_TO_DROP = ["Haftanin_gunu_Sin", "Haftanin_gunu_Cos", "Gun_Sin", "Gun_Cos", 
     """
 
 # --- MODEL PARAMETERS ---
-TEST_SIZE = 24*30 # Last 120 days for testing
+TEST_SIZE = 24 # Last 120 days for testing
 WARMUP_PERIOD = 504  # To handle NaN values caused by the largest lag (Lag504)
-NUM_OF_SPLITS =5 # Number of folds for Time Series Cross Validation
+NUM_OF_SPLITS = 365 # Number of folds for Time Series Cross Validation
 
 
 

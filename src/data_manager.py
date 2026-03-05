@@ -29,8 +29,19 @@ class DataManager:
         """
         Veriyi yükler, tarih ayarını yapar, kategorik dönüşümü yapar.
         """
-        print(f"[DataManager] Loading data from: {INPUT_FILE_PATH}")
-        df = pd.read_excel(INPUT_FILE_PATH, engine='openpyxl')
+        parquet_path = INPUT_FILE_PATH.replace('.xlsx', '.parquet')
+        
+        # Eğer parquet dosyası var ve xlsx'ten daha güncelse, oradan hızlıca yükle
+        if os.path.exists(parquet_path) and os.path.getmtime(parquet_path) > os.path.getmtime(INPUT_FILE_PATH):
+            print(f"[DataManager] Hızlı yükleme: {parquet_path} okunuyor...")
+            df = pd.read_parquet(parquet_path)
+        else:
+            print(f"[DataManager] Veri Excel'den yükleniyor (bir kaç dakika sürebilir): {INPUT_FILE_PATH}")
+            df = pd.read_excel(INPUT_FILE_PATH, engine='openpyxl')
+            
+            # Sonraki sefer çok daha hızlı yüklenebilmesi için Parquet olarak kaydet
+            print(f"[DataManager] Veri Parquet formatında önbelleğe alınıyor (Hızlı yükleme için)...")
+            df.to_parquet(parquet_path, engine='pyarrow')
 
 
         # 2. Sayısal Dönüşümler (Virgül -> Nokta)
@@ -65,12 +76,15 @@ class DataManager:
         # ---------------------------------
         
         # Tam datetime index oluşturma
-        df['Datetime'] = df[RAW_DATE_COL].dt.normalize() + pd.to_timedelta(df[RAW_HOUR_COL], unit='h')
+        # Excel'deki Saat=0 verisi, günün 24. saatini (23:00-00:00) temsil eder.
+        # Bu kronolojik olarak ertesi günün 00:00'ına denk gelir.
+        corrected_hours = df[RAW_HOUR_COL].replace(0, 24)
+        df['Datetime'] = df[RAW_DATE_COL].dt.normalize() + pd.to_timedelta(corrected_hours, unit='h')
         df.set_index('Datetime', inplace=True)
         df.sort_index(inplace=True) # Tarih sırasını garantiye al
 
         # Zaman bileşenlerinin INT olduğundan emin ol (XGBoost için kritik)
-        time_features = ['Yıl', 'Ay', 'Gün', 'Saat', 'Haftanın_Günü']
+        time_features = ['Yıl', 'Ay', 'Gün', 'Saat', 'Haftanın_Günü', "Ramazan_Bayram","Kurban_Bayram"]
         for tf in time_features:
             if tf in df.columns:
                 df[tf] = df[tf].astype(int)
@@ -172,20 +186,6 @@ class DataManager:
             print("   -> HATA: Sıcaklık sütunları bulunamadı! Lütfen Excel başlıklarını kontrol edin.")
     
         
-        # Referans sıcaklıklar (Türkiye standartlarına göre)
-        # Isıtma sınırı: 16°C (Bunun altı kombi yakar)
-        # Soğutma sınırı: 24°C (Bunun üstü klima açar)
-        
-        # HDD: Isıtma İhtiyacı
-        df['HDD_Heating_Stress'] = np.maximum(0, 16 - df[BASE_TEMP_COL])
-        
-        # CDD: Soğutma İhtiyacı 
-        df['CDD_Cooling_Stress'] = np.maximum(0, df[BASE_TEMP_COL] - 24)
-        
-        # Uç Değerlerin Karesi (Şiddeti artırmak için)
-        df['Extreme_Heat_Impact'] = df['CDD_Cooling_Stress'] ** 2
-        df['Extreme_Cold_Impact'] = df['HDD_Heating_Stress'] ** 2
-            
         # ----------------------------------------------------
         # 5. Kategorik Veri İşleme
         # Özel Günler -> Category
@@ -194,7 +194,7 @@ class DataManager:
             df['ÖzelGün_Adı'] = df['ÖzelGün_Adı'].astype('category')
 
 
-        binary_flags = ['Is_Ramadan', 'Is_Sahur', 'Is_lockdown', 'Ramazan_Bayram','Yilbasi',"Kurban_Bayram","Secim_Gunu", "Milli_Bayram"] 
+        binary_flags = ['Is_Ramadan', 'Is_Sahur', 'Is_lockdown','Yilbasi', "weekday_after_bayram", "is_religional_holiday", "before_yilbasi", "weekday_after_yilbasi","Secim_Gunu", "Milli_Bayram"]
 
         print(f"[DataManager] Binary sütunlar (0/1) işleniyor: {binary_flags}")
 

@@ -36,6 +36,7 @@ class LightGBMManager:
             'n_estimators': 2000,
             'objective': 'regression',
             'n_jobs': -1,
+            'verbose': -1,
             'random_state': 42,
             'importance_type': 'gain',
             'learning_rate': 0.05074154948325871,

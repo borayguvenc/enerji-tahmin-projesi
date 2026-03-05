@@ -40,7 +40,8 @@ class Evaluator:
             'XGB_Pred': [],
             'LGBM_Pred': [],
             'CAT_Pred': [],
-            'Ensemble_Pred': []
+            'Ensemble_Pred': [],
+            'fold_id': []
         }
 
         for train_index, test_index in self.tscv.split(X):
@@ -97,6 +98,7 @@ class Evaluator:
                 storage['LGBM_Pred'].extend(p_lgbm)
                 storage['CAT_Pred'].extend(p_cat)
                 storage['Ensemble_Pred'].extend(p_ensemble)
+                storage['fold_id'].extend([fold] * len(y_test))
                 final_preds_for_score = p_ensemble
             else:
                 if model_type == 'XGB': man = ModelManager()
@@ -111,6 +113,7 @@ class Evaluator:
                 else:
                     preds = man.model.predict(X_test)
                 storage['Ensemble_Pred'].extend(preds)
+                storage['fold_id'].extend([fold] * len(y_test))
                 final_preds_for_score = preds
 
             mape = calculate_mape(y_test, final_preds_for_score)
@@ -128,6 +131,7 @@ class Evaluator:
             full_df['XGB_Pred'] = storage['XGB_Pred']
             full_df['LGBM_Pred'] = storage['LGBM_Pred']
             full_df['CAT_Pred'] = storage['CAT_Pred']
+            full_df['fold_id'] = storage['fold_id']
 
         return cv_scores, full_df
 

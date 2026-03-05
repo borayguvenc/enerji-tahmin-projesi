@@ -187,51 +187,54 @@ def main():
     elif mode == 'ALL':
         print("\n--- 🚀 GRAND ENSEMBLE MODU (XGB + LGBM + CAT) ---")
         
-        # 1. CV Analizi
+        # 1. CV Analizi (Base model predictions — already out-of-fold)
         scores, full_year_results = evaluator.run_cross_validation(X_full, y_full, model_type='ALL')
         evaluator.print_summary(scores)
         simple_ensemble_mape = np.mean(scores)
 
         # ---------------------------------------------------------
-        # 2. YENİ: REGRESYON (STACKING) KATMANI
+        # 2. LEAKAGE-FREE ENSEMBLE (Expanding Window)
         # ---------------------------------------------------------
         
         sm = StackingManager(project_root=current_dir)
         
-        # Meta-modeli (Regresyon) eğit
-        sm.train_meta_model(full_year_results)
+        # Run all ensemble strategies and pick the best one
+        best_predictions, all_results = sm.run_ensemble(full_year_results)
         
-        # Hibrit tahminleri üret
-        hybrid_predictions = sm.predict_hybrid(full_year_results)
-        
-        # Hibrit MAPE hesapla (Kıyaslama için)
+        # Get the best MAPE for logging
         from src.evaluator import calculate_mape
-        hybrid_mape = calculate_mape(full_year_results['Actual'], hybrid_predictions)
+        best_mape = calculate_mape(full_year_results['Actual'], best_predictions)
         
-        print(f"\n📊 PERFORMANS KIYASLAMASI:")
-        print(f"   -> Basit Ortalama MAPE: %{simple_ensemble_mape:.2f}")
-        print(f"   -> Regresyonlu Hibrit MAPE: %{hybrid_mape:.2f}")
         # ---------------------------------------------------------
 
-        # 3. LOGLAMA (Artık Notlar kısmına hibrit sonucu da ekliyoruz)
+        # 3. LOGLAMA
         print("\n[Logger] Sonuçlar veritabanına işleniyor...")
+        
+        # Build notes string with all strategy results
+        notes_parts = [f"Best: {sm.best_method} (MAPE={best_mape:.2f})"]
+        for name, (mape_val, _) in all_results.items():
+            notes_parts.append(f"{name}={mape_val:.2f}")
+        
         logger.log_experiment(
-            model_name="Grand_Ensemble_Hybrid",
-            mape_scores=scores, # Eski skorları koru
+            model_name="Grand_Ensemble_LeakFree",
+            mape_scores=scores,
             config_dict=config_pack,
-            notes=f"Simple MAPE: {simple_ensemble_mape:.2f} | Hybrid MAPE: {hybrid_mape:.2f}"
+            notes=" | ".join(notes_parts)
         )
         
-        # 4. Yıllık Rapor (Excel) - Hibrit sonucu en başa ekliyoruz
+        # 4. Yıllık Rapor (Excel)
         print("\n[Rapor] Yıllık Detaylı Excel Hazırlanıyor...")
         
-        predictions_pack = {
-            'Hybrid_Stacking': hybrid_predictions,       # <-- YENİ (Regresyonlu)
-            'Grand_Ensemble': full_year_results['Ensemble_Pred'], # Mevcut (Basit Ortalama)
-            'XGBoost_Detail': full_year_results['XGB_Pred'],
-            'LightGBM_Detail': full_year_results['LGBM_Pred'],
-            'CatBoost_Detail': full_year_results['CAT_Pred']
-        }
+        predictions_pack = {}
+        
+        # Tüm ensemble stratejilerini rapora ekle (her biri ayrı sayfa olur)
+        for strategy_name, (strategy_mape, strategy_preds) in all_results.items():
+            predictions_pack[strategy_name] = strategy_preds
+        
+        # Base model detaylarını da ekle
+        predictions_pack['XGBoost_Detail'] = full_year_results['XGB_Pred']
+        predictions_pack['LightGBM_Detail'] = full_year_results['LGBM_Pred']
+        predictions_pack['CatBoost_Detail'] = full_year_results['CAT_Pred']
         
         y_true_full = full_year_results['Actual']
 
@@ -241,7 +244,7 @@ def main():
             project_root=current_dir,
             filename=REPORT_FILENAME
         )
-        sm.save_model() # Meta modeli de kaydet
+        sm.save_model()
         
     elif mode == 'SNIPER':
         # --- MOD 5: SNIPER (BAYRAM) MODELİ ---

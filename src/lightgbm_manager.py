@@ -40,14 +40,14 @@ class LightGBMManager:
             verbose=-1,
             importance_type='gain',
             
-            learning_rate=0.05074154948325871,
-            num_leaves=30,           # Ağaç karmaşıklığı
-            max_depth=6,             # Derinlik limiti (Overfitting freni)
-            min_child_samples=28,    # Bir yaprakta en az 28 veri olsun
-            subsample=0.813694299293671,         # Satırların %81'ini kullan
-            colsample_bytree=0.6293259247827979, # Sütunların %63'ünü kullan (Çeşitlilik için süper)
-            reg_alpha=7.73076167663075,          # L1 Regularization (Gürültü temizliği)
-            reg_lambda=2.116570077959441         # L2 Regularization
+            learning_rate=0.0895602324603589,
+            num_leaves=40,           # Ağaç karmaşıklığı
+            max_depth=4,             # Derinlik limiti (Overfitting freni)
+            min_child_samples=33,    # Bir yaprakta en az 33 veri olsun
+            subsample=0.6702191322327771,         # Satırların %67'sini kullan
+            colsample_bytree=0.6740711121764694, # Sütunların %67'sini kullan (Çeşitlilik için süper)
+            reg_alpha=1.003975348777657,          # L1 Regularization (Gürültü temizliği)
+            reg_lambda=6.587716807268391         # L2 Regularization
         )
 
         print(f"[LightGBMManager] Training started on {len(X_train)} samples...")
